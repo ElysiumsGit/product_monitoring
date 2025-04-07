@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "product-monitoring-7d9c4",
+    "prod": "product-monitoring-7d9c4"
+  },
+  "targets": {},
+  "etags": {}
+}
