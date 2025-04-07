@@ -5,7 +5,8 @@ var serviceAccount = require("./permissions.json");
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
-    databaseURL: "https://product-monitoring-7d9c4-default-rtdb.firebaseio.com/"
+    databaseURL: "https://product-monitoring-7d9c4-default-rtdb.firebaseio.com/",
+    storageBucket: "gs://product-monitoring-7d9c4.firebasestorage.app",
 });
 
 const userRoute = require("./routes/userRoute");

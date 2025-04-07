@@ -54,4 +54,71 @@ const addStore = async(req, res) => {
     }
 }
 
-module.exports = { addStore };
+const updateStore = async(req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            store_name,
+            location,
+            name,
+            phone_number,
+            product,
+            display_name,
+            ...other_data
+        } = req.body;
+
+        const storeRef = db.collection("store").doc(id);
+        const storeDoc = await storeRef.get();
+
+        if(!storeDoc.exists){
+            return res.status(404).json({success: false, message: "Product not found"});
+        }
+
+        let updatedStore = {}
+
+        const allowedFields = { 
+            store_name,
+            location,
+            name,
+            phone_number,
+            product,
+            display_name,
+            ...other_data,
+            updatedAt: Timestamp.now(),
+        };
+
+        Object.keys(allowedFields).forEach(key => {
+            if(allowedFields[key] !== undefined){
+                updatedStore[key] = allowedFields[key];
+            }
+        });
+
+        await storeRef.update(updatedStore);
+        return res.status(200).json({success: true, message: "Store Updated Success"})
+
+    } catch (error) {
+        console.error("Store updating error", error);
+        return res.status(500).json({success: false, message: "Failed to update"});
+        
+    }
+}
+
+const deleteStore = async(req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const storeRef = db.collection("store").doc(id);
+        await storeRef.delete();
+
+        return res.status(200).json({success: true, message: "Store successfully deleted"});
+    } catch (error) {
+        console.error("Error adding store:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to add store",
+            error: error.message,
+        });
+    }
+}
+
+module.exports = { addStore, deleteStore, updateStore };
