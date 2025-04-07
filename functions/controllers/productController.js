@@ -24,24 +24,6 @@ const addProduct = async(req, res) => {
         const userRef = db.collection("products").doc();
         const productId = userRef.id;
 
-        let imageUrl = null;
-
-        if (req.file) {
-            // Generate a file path for storage in Firebase Storage
-            const file = bucket.file(`products/${productId}_${Date.now()}_${req.file.originalname}`);
-            
-            // Save the file to Firebase Storage
-            await file.save(req.file.buffer, {
-                metadata: { contentType: req.file.mimetype },
-            });
-
-            // Make the file publicly accessible
-            await file.makePublic();
-
-            // Generate the public URL for the file
-            imageUrl = `https://storage.googleapis.com/${bucket.name}/products/${file.name}`;
-        }
-        
         const userProduct = {
             id: productId,
             product_name,
@@ -50,7 +32,6 @@ const addProduct = async(req, res) => {
             sku_status,
             unit,
             quantity,
-            imageUrl,
             ...other_data,
             createdAt: Timestamp.now(),
         };
