@@ -12,6 +12,7 @@ admin.initializeApp({
 const userRoute = require("./routes/userRoute");
 const productRoute = require("./routes/productRoute");
 const storeRoute = require("./routes/storeRoute");
+const teamRoute = require("./routes/teamRoute");
 
 const express = require('express');
 const app = express();
@@ -23,5 +24,6 @@ app.use(express.json());
 app.use("/userRoute", userRoute);
 app.use("/productRoute", productRoute);
 app.use("/storeRoute", storeRoute);
+app.use("/teamRoute", teamRoute);
 
 exports.app = functions.https.onRequest(app);

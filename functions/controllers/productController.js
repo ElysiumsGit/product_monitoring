@@ -21,8 +21,12 @@ const addProduct = async(req, res) => {
             return res.status(400).json({ success: false, message: "All fields are required." });
         }
 
-        const userRef = db.collection("products").doc();
-        const productId = userRef.id;
+        const productRef = db.collection("products").doc();
+        const productId = productRef.id;
+
+        if(req.file){
+            
+        }
 
         const userProduct = {
             id: productId,
@@ -36,12 +40,12 @@ const addProduct = async(req, res) => {
             createdAt: Timestamp.now(),
         };
 
-        await userRef.set(userProduct);
+        await productRef.set(userProduct);
 
         return res.status(200).json({
             success: true,
             message: "Product added successfully",
-            data: { id: productId, imageUrl },
+            data: { id: productId },
         });
 
     } catch (error) {
