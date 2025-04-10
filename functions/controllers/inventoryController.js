@@ -1,104 +1,131 @@
 const { firestore } = require("firebase-admin");
 const { Timestamp } = require("firebase-admin/firestore");
+const collection = require("../utils/utils")
 
 const db = firestore();
 
 const inventoryAssign = async (req, res) => {
     try {
-        const assignments = req.body; // Expecting an array of assignments
+        const { id } = req.params;
+        const { inventoryProducts } = req.body;
 
-        if (!Array.isArray(assignments) || assignments.length === 0) {
-            return res.status(400).json({ success: false, message: "Invalid request format. Expected an array." });
+        if (!id || !inventoryProducts || !Array.isArray(inventoryProducts)) {
+            return res.status(400).json({ success: false, message: "Invalid data" });
         }
 
+        const storeRef = db.collection(collection.collections.storesCollection).doc(id).collection(collection.subCollections.inventoryCollection);
         const batch = db.batch();
 
-        for (const assignment of assignments) {
-            const { store_id, product_id } = assignment;
-
-            if (!store_id || !product_id ) {
-                return res.status(400).json({ success: false, message: "Missing required fields in one or more assignments" });
-            }
-
-            const productRef = db.collection("store").doc(store_id).collection("product").doc();
+        inventoryProducts.map((product) => {
+            const productRef = storeRef.doc(); 
             const inventoryId = productRef.id;
-
-            const inventoryData = {
-                id: inventoryId,
-                product_id,
-                createdAt: Timestamp.now(),
-            };
-            batch.set(productRef, inventoryData);
-        }
-
-        await batch.commit();
-
-        return res.status(200).json({
-            success: true,
-            message: "Store successfully assigned inventory products",
+            const productData = { ...product, inventory_id: inventoryId, createdAt: Timestamp.now() };
+            
+            batch.set(productRef, productData);
+            return productData; 
         });
 
+        await batch.commit();
+        return res.status(200).json({ success: true, message: "Inventory updated successfully" });
     } catch (error) {
-        console.error("Error assigning inventory", error);
-        return res.status(500).json({ success: false, message: "Failed to assign inventory" });
+        console.error("Error adding inventory", error);
+        return res.status(500).json({ success: false, message: "Failed to add inventory" });
     }
 };
 
-const updateInventory = async (req, res) => {
+const updateStock = async (req, res) => {
     try {
-        const { id } = req.params;
-        const { store_id, stocks, unit, low_stocks_treshold } = req.body;
+        const { store_id, inventory_id } = req.params; 
+        const { unit, quantity, product_id } = req.body;
 
-        if (!stocks || !unit || low_stocks_treshold === undefined) {
-            return res.status(400).json({ success: false, message: "Missing required fields for updating inventory" });
+        if (!store_id || !inventory_id || !unit || !quantity) {
+            return res.status(400).json({ success: false, message: "Invalid data" });
         }
 
-        // Check if the product exists in the global inventory
-        const productGlobalRef = db.collection("products").doc(id);
-        const productSnap = await productGlobalRef.get();
-
-        if (!productSnap.exists) {
-            return res.status(404).json({ success: false, message: `Product ${id} not found in global inventory` });
+        const productRef = db.collection(collection.collections.storesCollection).doc(store_id).collection(collection.subCollections.inventoryCollection).doc(inventory_id);
+        const getProduct = db.collection(collection.collections.productsCollection).doc(product_id);
+        const getProductRef = await getProduct.get();
+        
+        if(!getProductRef.exists){
+            res.status(404).json({ success: false, message: "Product Not found"});
         }
 
-        const productData = productSnap.data();
-        const currentQuantity = productData.quantity || 0;
-        const productName = productData.product_name;
+        // const currentStock = getProductRef.data().quantity;
 
-        if (currentQuantity < stocks) {
-            return res.status(400).json({ success: false, message: `Not enough stock for product ${productName}` });
+        // if (currentStock < quantity) {
+        //     return res.status(400).json({ success: false, message: "Not enough stock available" });
+        // }
+
+        // const newStock = currentStock - quantity;
+
+        // const batch = db.batch();
+
+        const inventoryUpdateData = {
+            unit: unit,
+            quantity: quantity,
+            updatedAt: Timestamp.now(),
         }
 
-        const newQuantity = currentQuantity - stocks;
+        await productRef.update(inventoryUpdateData)
 
-        // Update global inventory quantity
-        const batch = db.batch();
-        batch.update(productGlobalRef, { quantity: newQuantity });
+        // batch.update(getProduct, { quantity: newStock }); 
 
-        // Update store inventory
-        const productRef = db.collection("store").doc(store_id).collection("product").doc(id);
+        // await batch.commit();
 
-        const inventoryData = {
-            stocks,
-            unit,
-            low_stocks_treshold,
-            updatedAt: Timestamp.now(),  // Add an updated timestamp instead of creating new fields like field_type
-        };
-
-        // Update the store's inventory without overwriting unintended fields
-        batch.set(productRef, inventoryData, { merge: true });  // Merge ensures only the provided fields are updated
-
-        await batch.commit();
-
-        return res.status(200).json({
-            success: true,
-            message: "Inventory successfully updated",
-        });
-
+        return res.status(200).json({ success: true, message: "Inventory updated successfully" });
     } catch (error) {
         console.error("Error updating inventory", error);
         return res.status(500).json({ success: false, message: "Failed to update inventory" });
     }
 };
 
-module.exports = { inventoryAssign, updateInventory };
+const updateTreshold = async (req, res) => {
+    try {
+        const { store_id, inventory_id } = req.params; 
+        const { treshold } = req.body;
+
+        if (!store_id || !inventory_id || !treshold === undefined) {
+            return res.status(400).json({ success: false, message: "Invalid data" });
+        }
+
+        const productRef = db.collection(collection.collections.storesCollection).doc(store_id).collection(collection.subCollections.inventoryCollection).doc(inventory_id);
+        
+        const updatedTreshold = {
+            treshold,
+            updatedAt: Timestamp.now()
+        }
+
+        await productRef.update(updatedTreshold)
+
+        return res.status(200).json({ success: true, message: "Update Treshold Success" });
+    } catch (error) {
+        console.error("Error updating inventory", error);
+        return res.status(500).json({ success: false, message: "Failed to update inventory" });
+    }
+};
+
+const deleteInventory = async (req, res) => {
+    try {
+        const { store_id, inventory_id } = req.params;
+
+        if (!store_id || !inventory_id) {
+            return res.status(400).json({ success: false, message: "Invalid Data" });
+        }
+
+        const inventoryRef = db.collection(collection.collections.storesCollection).doc(store_id).collection(collection.subCollections.inventoryCollection).doc(inventory_id);
+        const getInventory = await inventoryRef.get();
+
+        if (!getInventory.exists) {
+            return res.status(200).json({ success: true, message: "Inventory does not exist" });
+        }
+
+        await inventoryRef.delete();
+        return res.status(200).json({ success: true, message: "Deleted Inventory" });
+
+    } catch (error) {
+        console.error("Error deleting product", error);
+        return res.status(500).json({ success: false, message: "Failed to delete" });
+    }
+};
+
+module.exports = { inventoryAssign, updateStock, updateTreshold, deleteInventory };

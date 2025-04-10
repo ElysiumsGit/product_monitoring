@@ -1,5 +1,6 @@
 const { firestore } = require("firebase-admin");
 const { Timestamp } = require("firebase-admin/firestore");
+const collection = require("../utils/utils")
 
 const db = firestore();
 
@@ -21,7 +22,7 @@ const addStore = async(req, res) => {
                 return res.status(400).json({ success: false, message: "All fields are required." });
         }
 
-        const storeRef = db.collection("store").doc();
+        const storeRef = db.collection(collection.collections.storesCollection).doc();
         const storeId = storeRef.id;
 
         const storeData = {
@@ -67,7 +68,7 @@ const updateStore = async(req, res) => {
             ...other_data
         } = req.body;
 
-        const storeRef = db.collection("store").doc(id);
+        const storeRef = db.collection(collection.collections.storesCollection).doc(id);
         const storeDoc = await storeRef.get();
 
         if(!storeDoc.exists){
@@ -107,7 +108,7 @@ const deleteStore = async(req, res) => {
     try {
         const { id } = req.params;
         
-        const storeRef = db.collection("store").doc(id);
+        const storeRef = db.collection(collection.collections.storesCollection).doc(id);
         await storeRef.delete();
 
         return res.status(200).json({success: true, message: "Store successfully deleted"});

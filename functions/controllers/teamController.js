@@ -1,5 +1,6 @@
 const { firestore } = require("firebase-admin");
 const { Timestamp } = require("firebase-admin/firestore");
+const collection = require("../utils/utils");
 
 const db = firestore();
 
@@ -17,7 +18,7 @@ const assignTeam = async (req, res) => {
         }
 
         const userIds = [agent_id, coordinator_id, ...promodiser_ids];
-        const userCheckPromises = userIds.map(id => db.collection("users").doc(id).get());
+        const userCheckPromises = userIds.map(id => db.collection(collection.collections.usersCollections).doc(id).get());
         const userCheckResults = await Promise.all(userCheckPromises);
 
         for (const doc of userCheckResults) {
@@ -26,7 +27,7 @@ const assignTeam = async (req, res) => {
             }
         }
 
-        const teamRef = db.collection("team").doc();
+        const teamRef = db.collection(collection.collections.teamCollection).doc();
         const teamId = teamRef.id;
 
         const assignTeam = {
@@ -38,7 +39,7 @@ const assignTeam = async (req, res) => {
         await teamRef.set(assignTeam);
 
         const updateUserPromises = userIds.map(id => 
-            db.collection("users").doc(id).update({ team: teamId, updatedAt: Timestamp.now() })
+            db.collection(collection.collections.usersCollections).doc(id).update({ team: teamId, updatedAt: Timestamp.now() })
         );
 
         await Promise.all(updateUserPromises);
@@ -63,22 +64,22 @@ const updateTeam = async (req, res) => {
             return res.status(400).json({ success: false, message: "All fields are required and promodiser_ids must be an array." });
         }
 
-        const teamRef = db.collection("team").doc(id);
+        const teamRef = db.collection(collection.collections.teamCollection).doc(id);
         const teamDoc = await teamRef.get();
 
         if (!teamDoc.exists) {
             return res.status(404).json({ success: false, message: "Team not found." });
         }
 
-        const currentTeamUsersSnap = await db.collection("users").where("team", "==", id).get(); 
+        const currentTeamUsersSnap = await db.collection(collection.collections.usersCollections).where("team", "==", id).get(); 
         const currentTeamUserIds = currentTeamUsersSnap.docs.map(doc => doc.id);
 
         const newUserIds = [agent_id, coordinator_id, ...promodiser_ids];
         const removeOldUsers = currentTeamUserIds
             .filter(userId => !newUserIds.includes(userId))
-            .map(userId => db.collection("users").doc(userId).update({ team: firestore.FieldValue.delete(), updatedAt: Timestamp.now() }));
+            .map(userId => db.collection(collection.collections.usersCollections).doc(userId).update({ team: firestore.FieldValue.delete(), updatedAt: Timestamp.now() }));
 
-        const userCheckPromises = newUserIds.map(userId => db.collection("users").doc(userId).get());
+        const userCheckPromises = newUserIds.map(userId => db.collection(collection.collections.usersCollections).doc(userId).get());
         const userCheckResults = await Promise.all(userCheckPromises);
 
         for (const userDoc of userCheckResults) {
@@ -88,7 +89,7 @@ const updateTeam = async (req, res) => {
         }
 
         const updateNewUsers = newUserIds.map(userId =>
-            db.collection("users").doc(userId).update({ team: id, updatedAt: Timestamp.now() })
+            db.collection(collection.collections.usersCollections).doc(userId).update({ team: id, updatedAt: Timestamp.now() })
         );
 
         await teamRef.update({ team_name, updatedAt: Timestamp.now() });
@@ -120,7 +121,7 @@ const deleteTeam = async (req, res) => {
         }
 
         // Get all users assigned to this team
-        const usersSnap = await db.collection("users").where("team", "==", id).get();
+        const usersSnap = await db.collection(collection.collections.usersCollections).where("team", "==", id).get();
         const updateUserPromises = usersSnap.docs.map(userDoc =>
             userDoc.ref.update({ team: firestore.FieldValue.delete(), updatedAt: Timestamp.now() })
         );

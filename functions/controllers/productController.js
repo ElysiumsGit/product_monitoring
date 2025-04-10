@@ -1,5 +1,6 @@
 const { firestore } = require("firebase-admin");
 const { Timestamp } = require("firebase-admin/firestore");
+const collection = require("../utils/utils");
 
 const db = firestore();
 
@@ -21,7 +22,7 @@ const addProduct = async(req, res) => {
             return res.status(400).json({ success: false, message: "All fields are required." });
         }
 
-        const productRef = db.collection("products").doc();
+        const productRef = db.collection(collection.collections.productsCollection).doc();
         const productId = productRef.id;
 
         if(req.file){
@@ -71,7 +72,7 @@ const updateProduct = async(req, res) => {
             ...other_data
         } = req.body;
 
-        const productRef = db.collection("products").doc(id);
+        const productRef = db.collection(collection.collections.productsCollection).doc(id);
         const productDoc = await productRef.get();
 
         if(!productDoc.exists){
@@ -118,7 +119,7 @@ const deleteProduct = async(req, res) => {
             return res.status(404).json({ success: false, message: "ID not Found." });
         }
 
-        const productRef = db.collection("products").doc(id);
+        const productRef = db.collection(collection.collections.productsCollection).doc(id);
 
         await productRef.delete();
 

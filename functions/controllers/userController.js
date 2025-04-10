@@ -3,6 +3,7 @@ const { Timestamp } = require("firebase-admin/firestore");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const admin = require("firebase-admin");
+const collection = require("../utils/utils")
 
 const db = firestore();
 
@@ -38,16 +39,14 @@ const addUser = async (req, res) => {
             return res.status(400).json({ success: false, message: "Passwords do not match." });
         }
 
-         let birthDateTimestamp;
-         try {
-             birthDateTimestamp = Timestamp.fromDate(new Date(birth_date));
-         } catch (error) {
-             return res.status(400).json({ success: false, message: "Invalid birth_date format." });
-         }
+        let birthDateTimestamp;
+        try {
+            birthDateTimestamp = Timestamp.fromDate(new Date(birth_date));
+        } catch (error) {
+            return res.status(400).json({ success: false, message: "Invalid birth_date format." });
+        }
 
-
-
-        const emailCheck = await db.collection("users").where("email", "==", email).get();
+        const emailCheck = await db.collection(collection.collections.usersCollections).where("email", "==", email).get();
         if (!emailCheck.empty) {
             return res.status(400).json({ success: false, message: "Email is already in use." });
         }
@@ -55,9 +54,8 @@ const addUser = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        const userRef = db.collection("users").doc();
+        const userRef = db.collection(collection.collections.usersCollections).doc();
 
-        // Create user in Firebase Authentication
         await admin.auth().createUser({
             email,
             password,
@@ -85,7 +83,7 @@ const addUser = async (req, res) => {
 
         await userRef.set(userData);
 
-        return res.status(201).json({
+        return res.status(200).json({
             success: true,
             message: "User added successfully",
             data: { id: userId },
@@ -122,8 +120,15 @@ const updateUser = async (req, res) => {
             ...otherData
         } = req.body;
 
-        const userRef = db.collection("users").doc(id);
+        const userRef = db.collection(collection.collections.usersCollections).doc(id);
         const userDoc = await userRef.get();
+
+        let birthDateTimestamp;
+        try {
+            birthDateTimestamp = Timestamp.fromDate(new Date(birth_date));
+        } catch (error) {
+            return res.status(400).json({ success: false, message: "Invalid birth_date format." });
+        }
 
         if (!userDoc.exists) {
             return res.status(404).json({ success: false, message: "User not found." });
@@ -132,7 +137,7 @@ const updateUser = async (req, res) => {
         let updatedData = {};
 
         if (email) {
-            const emailCheck = await db.collection("users").where("email", "==", email).get();
+            const emailCheck = await db.collection(collection.collections.usersCollections).where("email", "==", email).get();
             if (!emailCheck.empty && emailCheck.docs[0].id !== id) {
                 return res.status(400).json({ success: false, message: "Email is already in use." });
             }
@@ -152,7 +157,7 @@ const updateUser = async (req, res) => {
         const allowedFields = { 
             first_name, 
             last_name, 
-            birth_date, 
+            birth_date: birthDateTimestamp, 
             phone_number, 
             region, 
             province, 
@@ -188,7 +193,7 @@ const loginUser = async (req, res) => {
             return res.status(400).json({ success: false, message: "Email and password are required." });
         }
 
-        const userSnapshot = await db.collection("users").where("email", "==", email).get();
+        const userSnapshot = await db.collection(collection.collections.usersCollections).where("email", "==", email).get();
         if (userSnapshot.empty) {
             return res.status(400).json({ success: false, message: "Invalid email ssword." });
         }
