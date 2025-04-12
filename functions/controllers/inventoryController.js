@@ -49,17 +49,6 @@ const updateStock = async (req, res) => {
         if(!getProductRef.exists){
             res.status(404).json({ success: false, message: "Product Not found"});
         }
-
-        // const currentStock = getProductRef.data().quantity;
-
-        // if (currentStock < quantity) {
-        //     return res.status(400).json({ success: false, message: "Not enough stock available" });
-        // }
-
-        // const newStock = currentStock - quantity;
-
-        // const batch = db.batch();
-
         const inventoryUpdateData = {
             unit: unit,
             quantity: quantity,
@@ -67,10 +56,6 @@ const updateStock = async (req, res) => {
         }
 
         await productRef.update(inventoryUpdateData)
-
-        // batch.update(getProduct, { quantity: newStock }); 
-
-        // await batch.commit();
 
         return res.status(200).json({ success: true, message: "Inventory updated successfully" });
     } catch (error) {

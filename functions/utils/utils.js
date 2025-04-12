@@ -2,7 +2,8 @@ const collections = {
     usersCollections: "users",
     productsCollection: "products",
     storesCollection: "stores",
-    teamCollection: "team"
+    teamCollection: "team",
+    notifications: "notifications",
 };
 
 const subCollections = {
