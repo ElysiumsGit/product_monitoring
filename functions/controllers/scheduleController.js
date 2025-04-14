@@ -13,7 +13,7 @@ const addSchedule = async (req, res) => {
             return res.status(400).json({ success: false, message: "All fields are required." });
         }
 
-        const scheduleRef = db.collection("users").doc(user_id).collection("schedules").doc();
+        const scheduleRef = db.collection(collections.usersCollections).doc(user_id).collection(subCollections.schedules).doc();
         const scheduleId = scheduleRef.id;
 
         const updateInventoryRef = db.collection(collections.storesCollection)

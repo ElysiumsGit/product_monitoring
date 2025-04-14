@@ -7,7 +7,8 @@ const collections = {
 };
 
 const subCollections = {
-    inventoryCollection: "inventory"
+    inventoryCollection: "inventory",
+    schedules: "schedules"
 };
 
 module.exports = { collections, subCollections };
