@@ -43,6 +43,35 @@ const addProduct = async(req, res) => {
 
         await productRef.set(userProduct);
 
+        const adminUsersSnapshot = await db
+            .collection(collection.collections.usersCollections)
+            .where("role", "==", "admin")
+            .get();
+
+        const notificationPromises = [];
+
+        adminUsersSnapshot.forEach((adminDoc) => {
+            const adminId = adminDoc.id;
+
+            const notificationRef = db
+                .collection(collection.collections.usersCollections)
+                .doc(adminId)
+                .collection(collection.subCollections.notifications)
+                .doc();
+
+            const notificationData = {
+                id: notificationRef.id,
+                message: `A new product, ${product_name} has been launched. Review and assign to stores`,
+                createdAt: Timestamp.now(),
+                isRead: false,
+                type: "product",
+            };
+
+            notificationPromises.push(notificationRef.set(notificationData));
+        });
+
+        await Promise.all(notificationPromises);
+
         return res.status(200).json({
             success: true,
             message: "Product added successfully",

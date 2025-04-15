@@ -13,14 +13,14 @@ const assignTeam = async (req, res) => {
             promodiser_ids 
         } = req.body;
 
-        if (!team_name || !agent_id || !coordinator_id || !promodiser_ids || !Array.isArray(promodiser_ids)) {
+        if (!team_name || !Array.isArray(agent_id) || !Array.isArray(coordinator_id) || !Array.isArray(promodiser_ids)) {
             return res.status(400).json({
                 success: false,
                 message: "All fields are required and promodiser_ids must be an array."
             });
         }
 
-        const userIds = [agent_id, coordinator_id, ...promodiser_ids];
+        const userIds = [...agent_id, ...coordinator_id, ...promodiser_ids];
         const userCheckPromises = userIds.map(id =>
             db.collection(collection.collections.usersCollections).doc(id).get()
         );
@@ -48,7 +48,7 @@ const assignTeam = async (req, res) => {
 
         const updateUserPromises = userIds.map(async (id) => {
             const userRef = db.collection(collection.collections.usersCollections).doc(id);
-            const notificationRef = userRef.collection("notifications").doc();
+            const notificationRef = userRef.collection(collection.subCollections.notifications).doc();
             const notificationId = notificationRef.id;
 
             const dataNotification = {
@@ -110,7 +110,7 @@ const updateTeam = async (req, res) => {
 
         const removeOldUsers = removedUserIds.map(async userId => {
             const userRef = db.collection(collection.collections.usersCollections).doc(userId);
-            const notifRef = userRef.collection(collection.collections.notifications).doc();
+            const notifRef = userRef.collection(collection.subCollections.notifications).doc();
             await userRef.update({ team: firestore.FieldValue.delete(), updatedAt: Timestamp.now() });
             await notifRef.set({
                 notification_id: notifRef.id,
@@ -137,7 +137,7 @@ const updateTeam = async (req, res) => {
             await userRef.update({ team: id, updatedAt: Timestamp.now() });
 
             if (addedUserIds.includes(userId)) {
-                const notifRef = userRef.collection(collection.collections.notifications).doc();
+                const notifRef = userRef.collection(collection.subCollections.notifications).doc();
                 await notifRef.set({
                     notification_id: notifRef.id,
                     message: `You've been added to ${team_name}. Take a look at your team.`,
@@ -161,7 +161,7 @@ const updateTeam = async (req, res) => {
         if (oldTeamName !== team_name) {
             for (const userId of newUserIds) {
                 const userRef = db.collection(collection.collections.usersCollections).doc(userId);
-                const notifRef = userRef.collection(collection.collections.notifications).doc();
+                const notifRef = userRef.collection(collection.subCollections.notifications).doc();
                 notificationChanges.push(notifRef.set({
                     notification_id: notifRef.id,
                     message: `Team name has been changed from ${oldTeamName} to ${team_name}.`,
@@ -175,7 +175,7 @@ const updateTeam = async (req, res) => {
         // Agent change
         if (oldAgent !== agent_id) {
             const newAgentRef = db.collection(collection.collections.usersCollections).doc(agent_id);
-            const newNotifRef = newAgentRef.collection(collection.collections.notifications).doc();
+            const newNotifRef = newAgentRef.collection(collection.subCollections.notifications).doc();
             notificationChanges.push(
                 newNotifRef.set({
                     notification_id: newNotifRef.id,
@@ -190,7 +190,7 @@ const updateTeam = async (req, res) => {
         // Coordinator change
         if (oldCoordinator !== coordinator_id) {
             const newCoordRef = db.collection(collection.collections.usersCollections).doc(coordinator_id);
-            const newNotifRef = newCoordRef.collection(collection.collections.notifications).doc();
+            const newNotifRef = newCoordRef.collection(collection.subCollections.notifications).doc();
             notificationChanges.push(
                 newNotifRef.set({
                     notification_id: newNotifRef.id,
@@ -233,7 +233,7 @@ const deleteTeam = async (req, res) => {
 
         const updateUserAndNotifyPromises = usersSnap.docs.map(async (userDoc) => {
             const userRef = userDoc.ref;
-            const notifRef = userRef.collection(collection.collections.notifications).doc();
+            const notifRef = userRef.collection(collection.subCollections.notifications).doc();
             await userRef.update({ team: firestore.FieldValue.delete(), updatedAt: Timestamp.now() });
 
             await notifRef.set({

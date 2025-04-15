@@ -1,5 +1,5 @@
 const { firestore } = require("firebase-admin");
-const { collections } = require("../utils/utils");
+const { collections, subCollections } = require("../utils/utils");
 
 const db = firestore();
 
@@ -44,4 +44,43 @@ const deleteNotification = async (req, res) => {
     }
 };
 
-module.exports = { deleteNotification };
+const deleteAllNotifications = async (req, res) => {
+    try {
+        const { user_id } = req.params;
+
+        const notificationsRef = db
+            .collection(collections.usersCollections)
+            .doc(user_id)
+            .collection(subCollections.notifications);
+
+        const snapshot = await notificationsRef.get();
+
+        if (snapshot.empty) {
+            return res.status(200).json({
+                success: true,
+                message: "No notifications to delete.",
+            });
+        }
+
+        const batch = db.batch();
+        snapshot.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+
+        await batch.commit();
+
+        return res.status(200).json({
+            success: true,
+            message: "All notifications have been deleted.",
+        });
+
+    } catch (error) {
+        console.error("Error deleting notifications:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to delete all notifications",
+        });
+    }
+};
+
+module.exports = { deleteNotification, deleteAllNotifications };

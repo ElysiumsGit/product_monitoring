@@ -3,12 +3,15 @@ const collections = {
     productsCollection: "products",
     storesCollection: "stores",
     teamCollection: "team",
-    notifications: "notifications",
+    category: "category",
 };
 
 const subCollections = {
     inventoryCollection: "inventory",
-    schedules: "schedules"
+    schedules: "schedules",
+    notifications: "notifications",
+    assignTeam: "notifications",
+    assignStore: "assign_store",
 };
 
 module.exports = { collections, subCollections };

@@ -3,7 +3,7 @@ const { inventoryAssign, updateStock, deleteInventory, updateTreshold } = requir
 
 const router = express.Router();
 
-router.post("/:id", inventoryAssign);
+router.post("/:store_id", inventoryAssign);
 router.put("/:store_id/updateInventory/:inventory_id", updateStock);
 router.put("/:store_id/updateTreshold/:inventory_id", updateTreshold);
 router.delete("/:store_id/deleteInventory/:inventory_id", deleteInventory);

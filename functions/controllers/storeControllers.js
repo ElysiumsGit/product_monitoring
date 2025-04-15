@@ -4,7 +4,7 @@ const collection = require("../utils/utils")
 
 const db = firestore();
 
-const addStore = async(req, res) => {
+const addStore = async (req, res) => {
     try {
         const {
             store_name,
@@ -16,10 +16,8 @@ const addStore = async(req, res) => {
             ...other_data
         } = req.body;
 
-        if(
-                !store_name || !location || !name || !phone_number || !product || !display_name
-        )   {
-                return res.status(400).json({ success: false, message: "All fields are required." });
+        if (!store_name || !location || !name || !phone_number || !product || !display_name) {
+            return res.status(400).json({ success: false, message: "All fields are required." });
         }
 
         const storeRef = db.collection(collection.collections.storesCollection).doc();
@@ -39,9 +37,38 @@ const addStore = async(req, res) => {
 
         await storeRef.set(storeData);
 
+        const adminUsersSnapshot = await db
+            .collection(collection.collections.usersCollections)
+            .where("role", "==", "admin")
+            .get();
+
+        const notificationPromises = [];
+
+        adminUsersSnapshot.forEach((adminDoc) => {
+            const adminId = adminDoc.id;
+
+            const notificationRef = db
+                .collection(collection.collections.usersCollections)
+                .doc(adminId)
+                .collection(collection.subCollections.notifications)
+                .doc();
+
+            const notificationData = {
+                id: notificationRef.id,
+                message: `${store_name} store has been created and is ready for team assignment`,
+                createdAt: Timestamp.now(),
+                isRead: false,
+                type: "store",
+            };
+
+            notificationPromises.push(notificationRef.set(notificationData));
+        });
+
+        await Promise.all(notificationPromises);
+
         return res.status(200).json({
             success: true,
-            message: "Store added successfully",
+            message: "Store added successfully and notifications sent.",
             data: { id: storeId },
         });
 
@@ -53,7 +80,8 @@ const addStore = async(req, res) => {
             error: error.message,
         });
     }
-}
+};
+
 
 const updateStore = async(req, res) => {
     try {
@@ -122,4 +150,33 @@ const deleteStore = async(req, res) => {
     }
 }
 
-module.exports = { addStore, deleteStore, updateStore };
+const assignStore = async(req, res) => {
+    try {
+        const { id } = req.params;
+
+        const  {
+            assignedCustomTeam
+        } = req.body;
+
+        if(!Array.isArray(assignedCustomTeam)){
+            res.status(400).json({success: true, message: "Assigned team must be an array"});
+        }
+
+        const storeRef = db.collection(collection.collections.storesCollection).doc(id).collection(collection.subCollections.assignStore).doc();
+
+        const data = {
+            assignedCustomTeam
+        }
+        await storeRef.set(data);
+
+        return res.status(200).json({success: true, message: "This store successfully assigned a team"});
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Failed to add store",
+            error: error.message,
+        });
+    }
+}
+
+module.exports = { addStore, deleteStore, updateStore, assignStore };

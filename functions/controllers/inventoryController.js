@@ -6,14 +6,14 @@ const db = firestore();
 
 const inventoryAssign = async (req, res) => {
     try {
-        const { id } = req.params;
+        const { store_id } = req.params;
         const { inventoryProducts } = req.body;
 
-        if (!id || !inventoryProducts || !Array.isArray(inventoryProducts)) {
+        if (!store_id || !inventoryProducts || !Array.isArray(inventoryProducts)) {
             return res.status(400).json({ success: false, message: "Invalid data" });
         }
 
-        const storeRef = db.collection(collection.collections.storesCollection).doc(id).collection(collection.subCollections.inventoryCollection);
+        const storeRef = db.collection(collection.collections.storesCollection).doc(store_id).collection(collection.subCollections.inventoryCollection);
         const batch = db.batch();
 
         inventoryProducts.map((product) => {
@@ -36,26 +36,26 @@ const inventoryAssign = async (req, res) => {
 const updateStock = async (req, res) => {
     try {
         const { store_id, inventory_id } = req.params; 
-        const { unit, quantity, product_id } = req.body;
+        const { unit, quantity } = req.body;
 
         if (!store_id || !inventory_id || !unit || !quantity) {
             return res.status(400).json({ success: false, message: "Invalid data" });
         }
 
-        const productRef = db.collection(collection.collections.storesCollection).doc(store_id).collection(collection.subCollections.inventoryCollection).doc(inventory_id);
-        const getProduct = db.collection(collection.collections.productsCollection).doc(product_id);
-        const getProductRef = await getProduct.get();
+        const inventoryRef = db.collection(collection.collections.storesCollection).doc(store_id).collection(collection.subCollections.inventoryCollection).doc(inventory_id);
         
-        if(!getProductRef.exists){
-            res.status(404).json({ success: false, message: "Product Not found"});
+        const doc = await inventoryRef.get();
+        if (!doc.exists) {
+            return res.status(404).json({ success: false, message: "Inventory id not found" });
         }
+            
         const inventoryUpdateData = {
             unit: unit,
             quantity: quantity,
             updatedAt: Timestamp.now(),
         }
 
-        await productRef.update(inventoryUpdateData)
+        await inventoryRef.update(inventoryUpdateData)
 
         return res.status(200).json({ success: true, message: "Inventory updated successfully" });
     } catch (error) {
@@ -73,14 +73,19 @@ const updateTreshold = async (req, res) => {
             return res.status(400).json({ success: false, message: "Invalid data" });
         }
 
-        const productRef = db.collection(collection.collections.storesCollection).doc(store_id).collection(collection.subCollections.inventoryCollection).doc(inventory_id);
+        const inventoryRef = db.collection(collection.collections.storesCollection).doc(store_id).collection(collection.subCollections.inventoryCollection).doc(inventory_id);
         
+        const doc = await inventoryRef.get();
+        if (!doc.exists) {
+            return res.status(404).json({ success: false, message: "Inventory id not found" });
+        }
+
         const updatedTreshold = {
             treshold,
             updatedAt: Timestamp.now()
         }
 
-        await productRef.update(updatedTreshold)
+        await inventoryRef.update(updatedTreshold)
 
         return res.status(200).json({ success: true, message: "Update Treshold Success" });
     } catch (error) {
