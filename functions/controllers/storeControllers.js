@@ -139,6 +139,35 @@ const deleteStore = async(req, res) => {
         const storeRef = db.collection(collection.collections.storesCollection).doc(id);
         await storeRef.delete();
 
+        const adminUsersSnapshot = await db
+            .collection(collection.collections.usersCollections)
+            .where("role", "==", "admin")
+            .get();
+
+        const notificationPromises = [];
+
+        adminUsersSnapshot.forEach((adminDoc) => {
+            const adminId = adminDoc.id;
+
+            const notificationRef = db
+                .collection(collection.collections.usersCollections)
+                .doc(adminId)
+                .collection(collection.subCollections.notifications)
+                .doc();
+
+            const notificationData = {
+                id: notificationRef.id,
+                message: `${store_name} store has been created and is ready for team assignment`,
+                createdAt: Timestamp.now(),
+                isRead: false,
+                type: "store",
+            };
+
+            notificationPromises.push(notificationRef.set(notificationData));
+        });
+
+        await Promise.all(notificationPromises);
+
         return res.status(200).json({success: true, message: "Store successfully deleted"});
     } catch (error) {
         console.error("Error adding store:", error);
@@ -152,31 +181,192 @@ const deleteStore = async(req, res) => {
 
 const assignStore = async(req, res) => {
     try {
-        const { id } = req.params;
+        const { store_id } = req.params;
+        const { assigned_users } = req.body;
 
-        const  {
-            assignedCustomTeam
-        } = req.body;
-
-        if(!Array.isArray(assignedCustomTeam)){
-            res.status(400).json({success: true, message: "Assigned team must be an array"});
+        if(!Array.isArray(assigned_users)){
+            return res.status(400).json({
+                success: false,
+                message: "assigned user must be an array"
+            });
         }
 
-        const storeRef = db.collection(collection.collections.storesCollection).doc(id).collection(collection.subCollections.assignStore).doc();
+        const batch = db.batch();
 
-        const data = {
-            assignedCustomTeam
+        const storeDoc = db.collection(collection.collections.storesCollection).doc(store_id);
+        const storeSnap = await storeDoc.get();
+
+        const storeData = storeSnap.data();
+        const storeName = storeData.display_name || "a store";
+
+        for(const userId of assigned_users  ){
+
+            const assignRef = storeDoc
+                .collection(collection.subCollections.assignStore)
+                .doc(); 
+
+            const getAssignId = assignRef.id
+
+            const assignedData = {
+                id: getAssignId,
+                user_id : userId,
+                createdAt : Timestamp.now(),
+            }
+
+            batch.set(assignRef, assignedData);
+            
+            const notificationRef = db
+                .collection(collection.collections.usersCollections)
+                .doc(userId)
+                .collection(collection.subCollections.notifications)
+                .doc();
+
+            const getId = notificationRef.id;
+
+            const notificationData = {
+                message: `You have been assigned to ${storeName}`,
+                type: "store",
+                id: getId,
+                createdAt: Timestamp.now(),
+                read: false
+            };
+
+            batch.set(notificationRef, notificationData)
+
         }
-        await storeRef.set(data);
 
-        return res.status(200).json({success: true, message: "This store successfully assigned a team"});
+        await batch.commit()
+
+        return res.status(200).json({
+            success: true,
+            message: "Success"
+        });
     } catch (error) {
         return res.status(500).json({
             success: false,
-            message: "Failed to add store",
-            error: error.message,
+            message: "Failed to add",
+            error: error.message
         });
     }
 }
 
-module.exports = { addStore, deleteStore, updateStore, assignStore };
+const deleteAssign = async (req, res) => {
+    try {
+        const { store_id, assign_id } = req.params;
+
+        const assignRef = db
+            .collection(collection.collections.storesCollection)
+            .doc(store_id)
+            .collection(collection.subCollections.assignStore)
+            .doc(assign_id);
+
+        const assignSnap = await assignRef.get();
+
+        if (!assignSnap.exists) {
+            return res.status(404).json({
+                success: false,
+                message: "Assignment not found",
+            });
+        }
+
+        const assignData = assignSnap.data();
+        const userId = assignData.user_id;
+
+        const batch = db.batch();
+        batch.delete(assignRef);
+
+        const notificationRef = db
+            .collection(collection.collections.usersCollections)
+            .doc(userId)
+            .collection(collection.subCollections.notifications)
+            .doc();
+
+        const notificationData = {
+            message: `You have been removed from a store assignment.`,
+            type: "store",
+            id: notificationRef.id,
+            createdAt: Timestamp.now(),
+            read: false,
+        };
+
+        batch.set(notificationRef, notificationData);
+
+        await batch.commit();
+
+        return res.status(200).json({
+            success: true,
+            message: "Deleted",
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Failed to delete this person",
+            error: error.message,
+        });
+    }
+};
+
+const deleteAllAssign = async (req, res) => {
+    try {
+        const { store_id } = req.params;
+
+        const assignCollectionRef = db
+            .collection(collection.collections.storesCollection)
+            .doc(store_id)
+            .collection(collection.subCollections.assignStore);
+
+        const snapshot = await assignCollectionRef.get();
+
+        if (snapshot.empty) {
+            return res.status(200).json({
+                success: true,
+                message: "No assignments to delete"
+            });
+        }
+
+        const batch = db.batch();
+
+        snapshot.docs.forEach((doc) => {
+            const data = doc.data();
+            const userId = data.user_id; // Adjust this based on how your doc is structured
+
+            // Delete the assignment
+            batch.delete(doc.ref);
+
+            // Create a notification for the user
+            const notificationRef = db
+                .collection(collection.collections.usersCollections)
+                .doc(userId)
+                .collection(collection.subCollections.notifications)
+                .doc(); // Auto-generated ID
+
+            const notificationData = {
+                message: `You have been removed from a store assignment.`,
+                type: "store",
+                id: notificationRef.id,
+                createdAt: Timestamp.now(),
+                read: false,
+            };
+
+            batch.set(notificationRef, notificationData);
+        });
+
+        await batch.commit();
+
+        return res.status(200).json({
+            success: true,
+            message: "All assignments deleted and users notified"
+        });
+
+    } catch (error) {
+        console.error("Error deleting assignments:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to delete assignments",
+            error: error.message
+        });
+    }
+};
+
+
+module.exports = { addStore, deleteStore, updateStore, assignStore, deleteAssign, deleteAllAssign };

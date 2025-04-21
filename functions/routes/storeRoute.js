@@ -1,10 +1,12 @@
 const express = require("express")
-const { addStore, deleteStore, updateStore, assignStore } = require("../controllers/storeControllers");
+const { addStore, deleteStore, updateStore, assignStore, deleteAssign, deleteAllAssign } = require("../controllers/storeControllers");
 
 const router = express.Router();
 router.post("/", addStore);
-router.delete("/:id", deleteStore);
+router.delete("/deleteStore/:id", deleteStore);
 router.put("/:id", updateStore);
-router.put("/:id", assignStore);
+router.post("/:store_id", assignStore);
+router.delete("/:store_id/deleteAssign/:assign_id", deleteAssign);
+router.delete("/deleteAllAssign/:store_id", deleteAllAssign);
 
 module.exports = router;

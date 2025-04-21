@@ -8,19 +8,17 @@ const assignTeam = async (req, res) => {
     try {
         const {
             team_name,
-            agent_id,
-            coordinator_id,
-            promodiser_ids 
+            team
         } = req.body;
 
-        if (!team_name || !Array.isArray(agent_id) || !Array.isArray(coordinator_id) || !Array.isArray(promodiser_ids)) {
+        if (!team_name || !Array.isArray(team)) {
             return res.status(400).json({
                 success: false,
                 message: "All fields are required and promodiser_ids must be an array."
             });
         }
 
-        const userIds = [...agent_id, ...coordinator_id, ...promodiser_ids];
+        const userIds = [...team];
         const userCheckPromises = userIds.map(id =>
             db.collection(collection.collections.usersCollections).doc(id).get()
         );
@@ -38,13 +36,13 @@ const assignTeam = async (req, res) => {
         const teamRef = db.collection(collection.collections.teamCollection).doc();
         const teamId = teamRef.id;
 
-        const assignTeam = {
+        const assignTeamData = {
             team_id: teamId,
             team_name,
             createdAt: Timestamp.now(),
         };
 
-        await teamRef.set(assignTeam);
+        await teamRef.set(assignTeamData);
 
         const updateUserPromises = userIds.map(async (id) => {
             const userRef = db.collection(collection.collections.usersCollections).doc(id);
@@ -83,10 +81,13 @@ const assignTeam = async (req, res) => {
 const updateTeam = async (req, res) => {
     try {
         const { id } = req.params;
-        const { team_name, agent_id, coordinator_id, promodiser_ids } = req.body;
+        const { team_name, team } = req.body;
 
-        if (!team_name || !agent_id || !coordinator_id || !promodiser_ids || !Array.isArray(promodiser_ids)) {
-            return res.status(400).json({ success: false, message: "All fields are required and promodiser_ids must be an array." });
+        if (!team_name || !Array.isArray(team)) {
+            return res.status(400).json({
+                success: false,
+                message: "All fields are required and team must be an array of user IDs."
+            });
         }
 
         const teamRef = db.collection(collection.collections.teamCollection).doc(id);
@@ -98,16 +99,35 @@ const updateTeam = async (req, res) => {
 
         const oldData = teamDoc.data();
         const oldTeamName = oldData.team_name;
-        const oldAgent = oldData.agent_id;
-        const oldCoordinator = oldData.coordinator_id;
 
-        const currentTeamUsersSnap = await db.collection(collection.collections.usersCollections).where("team", "==", id).get(); 
-        const currentTeamUserIds = currentTeamUsersSnap.docs.map(doc => doc.id);
-        const newUserIds = [agent_id, coordinator_id, ...promodiser_ids];
+        // Get all users currently assigned to this team
+        const currentTeamUsersSnap = await db
+            .collection(collection.collections.usersCollections)
+            .where("team", "==", id)
+            .get();
 
-        const removedUserIds = currentTeamUserIds.filter(userId => !newUserIds.includes(userId));
-        const addedUserIds = newUserIds.filter(userId => !currentTeamUserIds.includes(userId));
+        const currentUserIds = currentTeamUsersSnap.docs.map(doc => doc.id);
+        const newUserIds = [...team];
 
+        const removedUserIds = currentUserIds.filter(uid => !newUserIds.includes(uid));
+        const addedUserIds = newUserIds.filter(uid => !currentUserIds.includes(uid));
+
+        // Validate all new user IDs
+        const userCheckPromises = newUserIds.map(uid =>
+            db.collection(collection.collections.usersCollections).doc(uid).get()
+        );
+        const userDocs = await Promise.all(userCheckPromises);
+
+        for (const userDoc of userDocs) {
+            if (!userDoc.exists) {
+                return res.status(400).json({
+                    success: false,
+                    message: "One or more user IDs are invalid."
+                });
+            }
+        }
+
+        // Remove old users
         const removeOldUsers = removedUserIds.map(async userId => {
             const userRef = db.collection(collection.collections.usersCollections).doc(userId);
             const notifRef = userRef.collection(collection.subCollections.notifications).doc();
@@ -121,17 +141,7 @@ const updateTeam = async (req, res) => {
             });
         });
 
-        const userCheckPromises = newUserIds.map(userId =>
-            db.collection(collection.collections.usersCollections).doc(userId).get()
-        );
-        const userCheckResults = await Promise.all(userCheckPromises);
-
-        for (const userDoc of userCheckResults) {
-            if (!userDoc.exists) {
-                return res.status(400).json({ success: false, message: "One or more user IDs are invalid." });
-            }
-        }
-
+        // Update new users
         const updateNewUsers = newUserIds.map(async userId => {
             const userRef = db.collection(collection.collections.usersCollections).doc(userId);
             await userRef.update({ team: id, updatedAt: Timestamp.now() });
@@ -148,61 +158,31 @@ const updateTeam = async (req, res) => {
             }
         });
 
-        await teamRef.update({
-            team_name,
-            agent_id,
-            coordinator_id,
-            updatedAt: Timestamp.now()
-        });
-
-        const notificationChanges = [];
-
-        // Team name changed
+        // Send notifications for team name change
+        const teamNameChangeNotifs = [];
         if (oldTeamName !== team_name) {
             for (const userId of newUserIds) {
                 const userRef = db.collection(collection.collections.usersCollections).doc(userId);
                 const notifRef = userRef.collection(collection.subCollections.notifications).doc();
-                notificationChanges.push(notifRef.set({
-                    notification_id: notifRef.id,
-                    message: `Team name has been changed from ${oldTeamName} to ${team_name}.`,
-                    createdAt: Timestamp.now(),
-                    type: "team",
-                    isRead: false
-                }));
+                teamNameChangeNotifs.push(
+                    notifRef.set({
+                        notification_id: notifRef.id,
+                        message: `Team name has been changed from ${oldTeamName} to ${team_name}.`,
+                        createdAt: Timestamp.now(),
+                        type: "team",
+                        isRead: false
+                    })
+                );
             }
         }
 
-        // Agent change
-        if (oldAgent !== agent_id) {
-            const newAgentRef = db.collection(collection.collections.usersCollections).doc(agent_id);
-            const newNotifRef = newAgentRef.collection(collection.subCollections.notifications).doc();
-            notificationChanges.push(
-                newNotifRef.set({
-                    notification_id: newNotifRef.id,
-                    message: `You are now the agent of ${team_name}.`,
-                    createdAt: Timestamp.now(),
-                    type: "team",
-                    isRead: false
-                })
-            );
-        }
+        // Update the team document
+        await teamRef.update({
+            team_name,
+            updatedAt: Timestamp.now()
+        });
 
-        // Coordinator change
-        if (oldCoordinator !== coordinator_id) {
-            const newCoordRef = db.collection(collection.collections.usersCollections).doc(coordinator_id);
-            const newNotifRef = newCoordRef.collection(collection.subCollections.notifications).doc();
-            notificationChanges.push(
-                newNotifRef.set({
-                    notification_id: newNotifRef.id,
-                    message: `You are now the coordinator of ${team_name}.`,
-                    createdAt: Timestamp.now(),
-                    type: "team",
-                    isRead: false
-                })
-            );
-        }
-
-        await Promise.all([...removeOldUsers, ...updateNewUsers, ...notificationChanges]);
+        await Promise.all([...removeOldUsers, ...updateNewUsers, ...teamNameChangeNotifs]);
 
         return res.status(200).json({
             success: true,
@@ -212,9 +192,13 @@ const updateTeam = async (req, res) => {
 
     } catch (error) {
         console.error("Error updating team", error);
-        return res.status(500).json({ success: false, message: "Failed to update team" });
+        return res.status(500).json({
+            success: false,
+            message: "Failed to update team"
+        });
     }
 };
+
 const deleteTeam = async (req, res) => {
     try {
         const { id } = req.params;
@@ -223,42 +207,57 @@ const deleteTeam = async (req, res) => {
         const teamDoc = await teamRef.get();
 
         if (!teamDoc.exists) {
-            return res.status(404).json({ success: false, message: "Team not found." });
+            return res.status(404).json({
+                success: false,
+                message: "Team not found."
+            });
         }
 
-        const teamData = teamDoc.data();
-        const teamName = teamData.team_name;
+        const { team_name } = teamDoc.data();
 
-        const usersSnap = await db.collection(collection.collections.usersCollections).where("team", "==", id).get();
+        // Get all users currently in the team
+        const usersSnap = await db
+            .collection(collection.collections.usersCollections)
+            .where("team", "==", id)
+            .get();
 
-        const updateUserAndNotifyPromises = usersSnap.docs.map(async (userDoc) => {
+        // Unassign users from the deleted team and notify them
+        const userUpdatePromises = usersSnap.docs.map(async (userDoc) => {
             const userRef = userDoc.ref;
             const notifRef = userRef.collection(collection.subCollections.notifications).doc();
-            await userRef.update({ team: firestore.FieldValue.delete(), updatedAt: Timestamp.now() });
+
+            await userRef.update({
+                team: firestore.FieldValue.delete(),
+                updatedAt: Timestamp.now()
+            });
 
             await notifRef.set({
                 notification_id: notifRef.id,
-                message: `Your team has been deleted.`,
+                message: `The team "${team_name}" you were part of has been deleted.`,
                 createdAt: Timestamp.now(),
                 type: "team",
                 isRead: false
             });
         });
 
-        await Promise.all(updateUserAndNotifyPromises);
+        await Promise.all(userUpdatePromises);
 
         await teamRef.delete();
 
         return res.status(200).json({
             success: true,
-            message: "Team successfully deleted, and users unassigned + notified.",
+            message: `Team "${team_name}" successfully deleted and all users notified.`,
             data: { id },
         });
 
     } catch (error) {
         console.error("Error deleting team", error);
-        return res.status(500).json({ success: false, message: "Failed to delete team" });
+        return res.status(500).json({
+            success: false,
+            message: "Failed to delete team"
+        });
     }
 };
+
 
 module.exports = { assignTeam, updateTeam, deleteTeam };

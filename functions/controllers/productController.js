@@ -25,10 +25,6 @@ const addProduct = async(req, res) => {
         const productRef = db.collection(collection.collections.productsCollection).doc();
         const productId = productRef.id;
 
-        if(req.file){
-            
-        }
-
         const userProduct = {
             id: productId,
             product_name,
@@ -151,6 +147,35 @@ const deleteProduct = async(req, res) => {
         const productRef = db.collection(collection.collections.productsCollection).doc(id);
 
         await productRef.delete();
+
+        const adminUsersSnapshot = await db
+            .collection(collection.collections.usersCollections)
+            .where("role", "==", "admin")
+            .get();
+
+        const notificationPromises = [];
+
+        adminUsersSnapshot.forEach((adminDoc) => {
+            const adminId = adminDoc.id;
+
+            const notificationRef = db
+                .collection(collection.collections.usersCollections)
+                .doc(adminId)
+                .collection(collection.subCollections.notifications)
+                .doc();
+
+            const notificationData = {
+                id: notificationRef.id,
+                message: `${store_name} store has been created and is ready for team assignment`,
+                createdAt: Timestamp.now(),
+                isRead: false,
+                type: "store",
+            };
+
+            notificationPromises.push(notificationRef.set(notificationData));
+        });
+
+        await Promise.all(notificationPromises);
 
         return res.status(200).json({success: true, message: "Deleted Product Success"})
 

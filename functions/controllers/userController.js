@@ -100,6 +100,7 @@ const addUser = async (req, res) => {
 };
 
 //=============================================================== U P D A T E  U S E R =========================================================================
+
 const updateUser = async (req, res) => {
     try {
         const { id } = req.params; 

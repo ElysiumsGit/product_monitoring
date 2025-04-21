@@ -17,6 +17,7 @@ const inventoryRoute = require("./routes/inventoryRoute");
 const scheduleRoute = require("./routes/scheduleRoute");
 const notificationRoute = require("./routes/notificationRoute");
 const categoryRoute = require("./routes/categoryRoute");
+const groupRoute = require("./routes/groupRoute");
 
 const express = require('express');
 const app = express();
@@ -33,5 +34,6 @@ app.use("/inventoryRoute", inventoryRoute);
 app.use("/scheduleRoute", scheduleRoute);
 app.use("/notificationRoute", notificationRoute);
 app.use("/categoryRoute", categoryRoute);
+app.use("/groupRoute", groupRoute);
 
 exports.app = functions.https.onRequest(app);

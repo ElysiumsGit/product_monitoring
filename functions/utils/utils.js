@@ -4,13 +4,13 @@ const collections = {
     storesCollection: "stores",
     teamCollection: "team",
     category: "category",
+    group: "group",
 };
 
 const subCollections = {
     inventoryCollection: "inventory",
     schedules: "schedules",
     notifications: "notifications",
-    assignTeam: "notifications",
     assignStore: "assign_store",
 };
 
