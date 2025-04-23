@@ -12,6 +12,8 @@ const subCollections = {
     schedules: "schedules",
     notifications: "notifications",
     assignStore: "assign_store",
+    schedules: "schedule",
+    activities: "activities",
 };
 
 module.exports = { collections, subCollections };

@@ -10,6 +10,9 @@ const db = firestore();
 //=============================================================== A D D  U S E R ==========================================================================
 const addUser = async (req, res) => {
     try {
+
+        const { userId } = req.params;
+
         const {
             first_name, 
             last_name, 
@@ -25,6 +28,7 @@ const addUser = async (req, res) => {
             password, 
             confirm_password, 
             uid,
+            hired_date,
             ...otherData
         } = req.body;
 
@@ -41,10 +45,12 @@ const addUser = async (req, res) => {
         }
 
         let birthDateTimestamp;
+        let hiredDateTimestamp;
         try {
+            hiredDateTimestamp = Timestamp.fromDate(new Date(hired_date));
             birthDateTimestamp = Timestamp.fromDate(new Date(birth_date));
         } catch (error) {
-            return res.status(400).json({ success: false, message: "Invalid birth_date format." });
+            return res.status(400).json({ success: false, message: "Invalid date format." });
         }
 
         const emailCheck = await db.collection(collection.collections.usersCollections).where("email", "==", email).get();
@@ -63,11 +69,11 @@ const addUser = async (req, res) => {
         });
 
         const authUID = authUser.uid;
-        const userId = userRef.id;
+        const getUserId = userRef.id;
 
         const userData = {
             uid: authUID,
-            id: userId,
+            id: getUserId,
             first_name, 
             last_name, 
             birth_date: birthDateTimestamp, 
@@ -79,12 +85,22 @@ const addUser = async (req, res) => {
             barangay, 
             zip_code,
             role, 
+            hired_date: hiredDateTimestamp,
             password: hashedPassword,
             ...otherData,
             createdAt: Timestamp.now(),
         };
 
         await userRef.set(userData);
+
+        const activityRef = db.collection(collection.collections.usersCollections).doc(userId).collection(collection.subCollections.activities).doc();
+
+        const activityData = {
+            title: `You have successfully Added ${first_name}`,
+            createdAt: Timestamp.now(),
+        }
+
+        await activityRef.set(activityData);
 
         return res.status(200).json({
             success: true,
@@ -191,19 +207,19 @@ const updateUser = async (req, res) => {
         }
 
         // Password update logic
-        if (password !== undefined || confirm_password !== undefined) {
-            if (password !== confirm_password) {
-                return res.status(400).json({ success: false, message: "Passwords do not match." });
-            }
+        // if (password !== undefined || confirm_password !== undefined) {
+        //     if (password !== confirm_password) {
+        //         return res.status(400).json({ success: false, message: "Passwords do not match." });
+        //     }
 
-            if (uid) {
-                await admin.auth().updateUser(uid, { password });
-            }
+        //     if (uid) {
+        //         await admin.auth().updateUser(uid, { password });
+        //     }
 
-            const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash(password, salt);
-            updatedData.password = hashedPassword;
-        }
+        //     const salt = await bcrypt.genSalt(10);
+        //     const hashedPassword = await bcrypt.hash(password, salt);
+        //     updatedData.password = hashedPassword;
+        // }
 
         await userRef.update(updatedData);
 
@@ -218,6 +234,90 @@ const updateUser = async (req, res) => {
         });
     }
 };
+
+const updatePassword = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { old_password, new_password, confirm_new_password } = req.body;
+
+        // Validate fields
+        if (!old_password || !new_password || !confirm_new_password) {
+            return res.status(400).json({
+                success: false,
+                message: "All password fields are required.",
+            });
+        }
+
+        // Fetch user doc
+        const userRef = db.collection(collection.collections.usersCollections).doc(id);
+        const userSnap = await userRef.get();
+
+        if (!userSnap.exists) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found.",
+            });
+        }
+
+        const userData = userSnap.data();
+        const hashedOldPassword = userData.password;
+        const uid = userData.uid;
+
+        // Compare old password
+        const isMatch = await bcrypt.compare(old_password, hashedOldPassword);
+        if (!isMatch) {
+            return res.status(400).json({
+                success: false,
+                message: "Old password is incorrect.",
+            });
+        }
+
+        // Confirm passwords match
+        if (new_password !== confirm_new_password) {
+            return res.status(400).json({
+                success: false,
+                message: "New passwords do not match.",
+            });
+        }
+
+        // Update Firebase Auth password if UID is available
+        if (uid) {
+            await admin.auth().updateUser(uid, {
+                password: new_password,
+            });
+        }
+
+        // Hash new password and update Firestore
+        const salt = await bcrypt.genSalt(10);
+        const hashedNewPassword = await bcrypt.hash(new_password, salt);
+
+        await userRef.update({
+            password: hashedNewPassword,
+        });
+
+        const activityRef = db.collection(collection.collections.usersCollections).doc(id).collection(collection.subCollections.activities).doc();
+
+        const activityData = {
+            title: `You have successfully change your password`,
+            createdAt: Timestamp.now(),
+        }
+
+        await activityRef.set(activityData);
+
+        return res.status(200).json({
+            success: true,
+            message: "Password updated successfully.",
+        });
+    } catch (error) {
+        console.error("Error updating password:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error.",
+            error: error.message,
+        });
+    }
+};
+
 //=============================================================== L O G I N =========================================================================
 // const SECRET_KEY = "praetorian";
 // const loginUser = async (req, res) => {
@@ -287,7 +387,9 @@ const loginUser = async (req, res) => {
             success: true,
             message: "Login successful",
             user: {
-                ...userData,
+                email,
+                role: userData.role || null,
+                id: userData.id,
             },
         });
 
@@ -302,4 +404,4 @@ const loginUser = async (req, res) => {
 };
 
 
-module.exports = { addUser, updateUser, loginUser };
+module.exports = { addUser, updateUser, loginUser, updatePassword };

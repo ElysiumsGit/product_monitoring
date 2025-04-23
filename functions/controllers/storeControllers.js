@@ -6,17 +6,21 @@ const db = firestore();
 
 const addStore = async (req, res) => {
     try {
+        const { userId } = req.params;
+
         const {
+            store_profile,
             store_name,
             location,
+            radius,
             name,
             phone_number,
-            product,
-            display_name,
+            display_information,
             ...other_data
         } = req.body;
 
-        if (!store_name || !location || !name || !phone_number || !product || !display_name) {
+        if (!store_name || !location || !name || !phone_number || !Array.isArray(display_information) || display_information.length === 0 || display_information.some(di => !di.product || !di.display_name)) 
+        {
             return res.status(400).json({ success: false, message: "All fields are required." });
         }
 
@@ -24,13 +28,14 @@ const addStore = async (req, res) => {
         const storeId = storeRef.id;
 
         const storeData = {
+            store_profile,
             id: storeId,
             store_name,
             location,
+            radius,
             name,
             phone_number,
-            product,
-            display_name,
+            display_information,
             ...other_data,
             createdAt: Timestamp.now(),
         };
@@ -66,6 +71,15 @@ const addStore = async (req, res) => {
 
         await Promise.all(notificationPromises);
 
+        const activityRef = db.collection(collection.collections.usersCollections).doc(userId).collection(collection.subCollections.activities).doc();
+
+        const activityData = {
+            title: `You added ${store_name}`,
+            createdAt: Timestamp.now(),
+        }
+
+        await activityRef.set(activityData);
+
         return res.status(200).json({
             success: true,
             message: "Store added successfully and notifications sent.",
@@ -81,7 +95,6 @@ const addStore = async (req, res) => {
         });
     }
 };
-
 
 const updateStore = async(req, res) => {
     try {
@@ -179,15 +192,30 @@ const deleteStore = async(req, res) => {
     }
 }
 
-const assignStore = async(req, res) => {
+const assignStore = async (req, res) => {
     try {
         const { store_id } = req.params;
-        const { assigned_users } = req.body;
+        const { assigned_users, weekly_pattern, same_time_for_all_days } = req.body;
 
-        if(!Array.isArray(assigned_users)){
+        // Basic validations
+        if (!Array.isArray(assigned_users) || !Array.isArray(weekly_pattern)) {
             return res.status(400).json({
                 success: false,
-                message: "assigned user must be an array"
+                message: "assigned_users and weekly_pattern must be arrays"
+            });
+        }
+
+        // Validate weekly pattern structure
+        const isValidPattern = weekly_pattern.every(item =>
+            typeof item.day === 'string' &&
+            typeof item.start_time === 'string' &&
+            typeof item.end_time === 'string'
+        );
+
+        if (!isValidPattern) {
+            return res.status(400).json({
+                success: false,
+                message: "Each item in weekly_pattern must include day, start_time, and end_time as strings"
             });
         }
 
@@ -196,59 +224,86 @@ const assignStore = async(req, res) => {
         const storeDoc = db.collection(collection.collections.storesCollection).doc(store_id);
         const storeSnap = await storeDoc.get();
 
+        if (!storeSnap.exists) {
+            return res.status(404).json({
+                success: false,
+                message: "Store not found"
+            });
+        }
+
         const storeData = storeSnap.data();
         const storeName = storeData.display_name || "a store";
 
-        for(const userId of assigned_users  ){
-
+        for (const userId of assigned_users) {
+            // Create assignment reference
             const assignRef = storeDoc
                 .collection(collection.subCollections.assignStore)
-                .doc(); 
+                .doc();
 
-            const getAssignId = assignRef.id
+            const assignId = assignRef.id;
 
             const assignedData = {
-                id: getAssignId,
-                user_id : userId,
-                createdAt : Timestamp.now(),
-            }
+                id: assignId,
+                user_id: userId,
+                createdAt: Timestamp.now(),
+            };
 
             batch.set(assignRef, assignedData);
-            
+
+            // Create notification
             const notificationRef = db
                 .collection(collection.collections.usersCollections)
                 .doc(userId)
                 .collection(collection.subCollections.notifications)
                 .doc();
 
-            const getId = notificationRef.id;
+            const notificationId = notificationRef.id;
 
             const notificationData = {
+                id: notificationId,
                 message: `You have been assigned to ${storeName}`,
                 type: "store",
-                id: getId,
                 createdAt: Timestamp.now(),
                 read: false
             };
 
-            batch.set(notificationRef, notificationData)
+            batch.set(notificationRef, notificationData);
 
+            // Create schedule
+            const scheduleRef = db
+                .collection(collection.collections.usersCollections)
+                .doc(userId)
+                .collection(collection.subCollections.schedules)
+                .doc();
+
+            const scheduleId = scheduleRef.id;
+
+            const scheduleData = {
+                id: scheduleId,
+                same_time_for_all_days: !!same_time_for_all_days,
+                weekly_pattern,
+                createdAt: Timestamp.now(),
+            };
+
+            batch.set(scheduleRef, scheduleData);
         }
 
-        await batch.commit()
+        await batch.commit();
 
         return res.status(200).json({
             success: true,
-            message: "Success"
+            message: "Store assigned and schedules created successfully"
         });
+
     } catch (error) {
         return res.status(500).json({
             success: false,
-            message: "Failed to add",
+            message: "Failed to assign store",
             error: error.message
         });
     }
-}
+};
+
 
 const deleteAssign = async (req, res) => {
     try {
