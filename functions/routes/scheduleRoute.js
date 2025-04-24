@@ -1,8 +1,8 @@
 const express = require("express");
-const { submitScheduleStore } = require("../controllers/scheduleController");
+const { assignStoreSchedule, getSchedule } = require("../controllers/assignScheduleController");
 
 const router = express.Router();
-
-router.post("/", submitScheduleStore);
+router.post("/assignSchedule", assignStoreSchedule);
+router.get("/getSchedule/:date", getSchedule);
 
 module.exports = router;

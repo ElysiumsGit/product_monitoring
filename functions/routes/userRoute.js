@@ -1,11 +1,11 @@
 const express = require("express")
-const { addUser, updateUser, loginUser, updatePassword } = require("../controllers/userController");
+const { addUser, updateUser, loginUser, updatePassword, getAllUsers } = require("../controllers/userController");
 const authenticateToken = require("../middleware/authenticateToken");
 
 const router = express.Router();
-router.post("/addUser/:userId", authenticateToken, addUser);
+router.post("/addUser/:currentUserId", addUser);
 router.post("/login", loginUser);
-router.put("/:id",authenticateToken , updateUser);
-router.put("/updatePassword/:id", authenticateToken, updatePassword);
+router.put("/:id/updateUser/:currentUserId", updateUser);
+router.put("/updatePassword/:id", updatePassword);
 
 module.exports = router;

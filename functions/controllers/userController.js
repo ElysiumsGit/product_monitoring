@@ -3,7 +3,8 @@ const { Timestamp } = require("firebase-admin/firestore");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const admin = require("firebase-admin");
-const collection = require("../utils/utils")
+const collection = require("../utils/utils");
+const { get } = require("../routes/userRoute");
 
 const db = firestore();
 
@@ -11,7 +12,7 @@ const db = firestore();
 const addUser = async (req, res) => {
     try {
 
-        const { userId } = req.params;
+        const { currentUserId } = req.params;
 
         const {
             first_name, 
@@ -93,10 +94,10 @@ const addUser = async (req, res) => {
 
         await userRef.set(userData);
 
-        const activityRef = db.collection(collection.collections.usersCollections).doc(userId).collection(collection.subCollections.activities).doc();
+        const activityRef = db.collection(collection.collections.usersCollections).doc(currentUserId).collection(collection.subCollections.activities).doc();
 
         const activityData = {
-            title: `You have successfully Added ${first_name}`,
+            title: `You have successfully Added ${first_name} with a role of ${role}`,
             createdAt: Timestamp.now(),
         }
 
@@ -105,7 +106,7 @@ const addUser = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: "User added successfully",
-            data: { id: userId },
+            data: { id: getUserId },
         });
 
     } catch (error) {
@@ -121,7 +122,7 @@ const addUser = async (req, res) => {
 //=============================================================== U P D A T E  U S E R =========================================================================
 const updateUser = async (req, res) => {
     try {
-        const { id } = req.params;
+        const { id, currentUserId } = req.params;
         const {
             first_name,
             last_name,
@@ -206,22 +207,16 @@ const updateUser = async (req, res) => {
             updatedData.email = email;
         }
 
-        // Password update logic
-        // if (password !== undefined || confirm_password !== undefined) {
-        //     if (password !== confirm_password) {
-        //         return res.status(400).json({ success: false, message: "Passwords do not match." });
-        //     }
-
-        //     if (uid) {
-        //         await admin.auth().updateUser(uid, { password });
-        //     }
-
-        //     const salt = await bcrypt.genSalt(10);
-        //     const hashedPassword = await bcrypt.hash(password, salt);
-        //     updatedData.password = hashedPassword;
-        // }
-
         await userRef.update(updatedData);
+
+        const activityRef = db.collection(collection.collections.usersCollections).doc(currentUserId).collection(collection.subCollections.activities).doc();
+
+        const activityData = {
+            title: `You updated the data of ${first_name}`,
+            createdAt: Timestamp.now(),
+        }
+
+        await activityRef.set(activityData);
 
         return res.status(200).json({ success: true, message: "User updated successfully." });
 
@@ -235,12 +230,14 @@ const updateUser = async (req, res) => {
     }
 };
 
+//=============================================================== U P D A T E  P A S S W O R D =========================================================================
+
 const updatePassword = async (req, res) => {
     try {
         const { id } = req.params;
         const { old_password, new_password, confirm_new_password } = req.body;
 
-        // Validate fields
+        // Validate fields 
         if (!old_password || !new_password || !confirm_new_password) {
             return res.status(400).json({
                 success: false,
@@ -404,4 +401,4 @@ const loginUser = async (req, res) => {
 };
 
 
-module.exports = { addUser, updateUser, loginUser, updatePassword };
+module.exports = { addUser, updateUser, loginUser, updatePassword  };
