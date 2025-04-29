@@ -1,10 +1,17 @@
 const collectionNameDB = [
     "users",
     "products",
+    "server",
+    "team",
+    "stores",
 ];
 
 const subCollectionNameDB = [
     "notifications",
 ];
 
-module.exports = { collectionNameDB, subCollectionNameDB}
+const filterCollection = [
+    "readSingleData"
+]
+
+module.exports = { collectionNameDB, subCollectionNameDB, filterCollection}

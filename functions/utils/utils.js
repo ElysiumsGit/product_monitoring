@@ -19,15 +19,27 @@ const subCollections = {
 };
 
 
+const users = "users";
+const notifications = "notifications";
+const activities = "activities";
+
 const dateToTimeStamp = (date) => {
-    try {
-        return { success: true, timestamp: Timestamp.fromDate(new Date(date)) };
+    try { 
+        return Timestamp.fromDate(new Date(date));
     } catch (error) {
         return { success: false, message: "Invalid date format." };
     }
 };
 
-module.exports = { collections, subCollections, dateToTimeStamp };
+module.exports = { 
+    collections,
+    subCollections,
+    users, 
+    notifications,
+    activities,
+    dateToTimeStamp 
+};
+
 
 
 

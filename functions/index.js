@@ -10,14 +10,14 @@ admin.initializeApp({
 });
 
 const userRoute = require("./routes/userRoute");
-const productRoute = require("./routes/productRoute");
-const storeRoute = require("./routes/storeRoute");
-const teamRoute = require("./routes/teamRoute");
-const inventoryRoute = require("./routes/inventoryRoute");
-const notificationRoute = require("./routes/notificationRoute");
-const categoryRoute = require("./routes/categoryRoute");
-const groupRoute = require("./routes/groupRoute");
-const scheduleRoute = require("./routes/scheduleRoute");
+// const productRoute = require("./routes/productRoute");
+// const storeRoute = require("./routes/storeRoute");
+// const teamRoute = require("./routes/teamRoute");
+// const inventoryRoute = require("./routes/inventoryRoute");
+// const notificationRoute = require("./routes/notificationRoute");
+// const categoryRoute = require("./routes/categoryRoute");
+// const groupRoute = require("./routes/groupRoute");
+// const scheduleRoute = require("./routes/scheduleRoute");
 const automationRoute = require("./routes/automationRoute");
 
 const express = require('express');
@@ -28,14 +28,14 @@ app.use(cors({ origin: true }));
 app.use(express.json());
 
 app.use("/userRoute", userRoute);
-app.use("/productRoute", productRoute);
-app.use("/storeRoute", storeRoute);
-app.use("/teamRoute", teamRoute);
-app.use("/inventoryRoute", inventoryRoute);
-app.use("/notificationRoute", notificationRoute);
-app.use("/categoryRoute", categoryRoute);
-app.use("/groupRoute", groupRoute);
-app.use("/scheduleRoute", scheduleRoute);
+// app.use("/productRoute", productRoute);
+// app.use("/storeRoute", storeRoute);
+// app.use("/teamRoute", teamRoute);
+// app.use("/inventoryRoute", inventoryRoute);
+// app.use("/notificationRoute", notificationRoute);
+// app.use("/categoryRoute", categoryRoute);
+// app.use("/groupRoute", groupRoute);
+// app.use("/scheduleRoute", scheduleRoute);
 app.use("/", automationRoute);
 
 

@@ -1,17 +1,16 @@
 const { firestore } = require("firebase-admin");
 const { Timestamp } = require("firebase-admin/firestore");
 const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
 const admin = require("firebase-admin");
-const collection = require("../utils/utils");
 const { get } = require("../routes/userRoute");
+const { users, activities, notifications, dateToTimeStamp } = require("../utils/utils");
 
 const db = firestore();
 
 //=============================================================== A D D  U S E R ==========================================================================
 const addUser = async (req, res) => {
     try {
-
+        
         const { currentUserId } = req.params;
 
         const {
@@ -30,6 +29,7 @@ const addUser = async (req, res) => {
             confirm_password, 
             uid,
             hired_date,
+            collectionName,
             ...otherData
         } = req.body;
 
@@ -45,35 +45,38 @@ const addUser = async (req, res) => {
             return res.status(400).json({ success: false, message: "Passwords do not match." });
         }
 
-        let birthDateTimestamp;
-        let hiredDateTimestamp;
-        try {
-            hiredDateTimestamp = Timestamp.fromDate(new Date(hired_date));
-            birthDateTimestamp = Timestamp.fromDate(new Date(birth_date));
-        } catch (error) {
-            return res.status(400).json({ success: false, message: "Invalid date format." });
-        }
-
-        const emailCheck = await db.collection(collection.collections.usersCollections).where("email", "==", email).get();
-        if (!emailCheck.empty) {
-            return res.status(400).json({ success: false, message: "Email is already in use." });
-        }
+        const hiredDateTimestamp = dateToTimeStamp(hired_date);
+        const birthDateTimestamp = dateToTimeStamp(birth_date);
 
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        const userRef = db.collection(collection.collections.usersCollections).doc();
+        const userRef = db.collection(users).doc();
 
-        const authUser = await admin.auth().createUser({
-            email,
-            password,
-        });
-
-        const authUID = authUser.uid;
+        let emailExists = false;
+        try {
+            await admin.auth().getUserByEmail(email);
+            emailExists = true;
+        } catch (error) {
+            if (error.code !== 'auth/user-not-found') {
+                console.error(error);
+                return res.status(500).json({ success: false, message: error.message });
+            }
+        }
+    
+        if (emailExists) {
+            return res.status(400).json({ success: false, message: "Email already exists." });
+        }
+        else{
+            await admin.auth().createUser({
+                email,
+                password,
+            });
+        }
+            
         const getUserId = userRef.id;
 
         const userData = {
-            uid: authUID,
             id: getUserId,
             first_name, 
             last_name, 
@@ -94,19 +97,45 @@ const addUser = async (req, res) => {
 
         await userRef.set(userData);
 
-        const activityRef = db.collection(collection.collections.usersCollections).doc(currentUserId).collection(collection.subCollections.activities).doc();
+        const activityRef = db.collection(users).doc(currentUserId).collection(activities).doc();
 
         const activityData = {
-            title: `You have successfully Added ${first_name} with a role of ${role}`,
+            title: `You have successfully added ${first_name} with a role of ${role}`,
             createdAt: Timestamp.now(),
         }
 
         await activityRef.set(activityData);
 
+        const adminUsersSnapshot = await db
+            .collection(users)
+            .where("role", "==", "admin")
+            .get();
+
+        const notificationPromises = [];
+
+        adminUsersSnapshot.forEach((adminDoc) => {
+            const adminId = adminDoc.id;
+
+            const notificationRef = db
+                .collection(users)
+                .doc(adminId)
+                .collection(notifications)
+                .doc();
+
+            const notificationData = {
+                id: notificationRef.id,
+                message: `${first_name} has been added to users with a role of ${role}`,
+                createdAt: Timestamp.now(),
+                isRead: false,
+                type: "users",
+            };
+
+            notificationPromises.push(notificationRef.set(notificationData));
+        });
+
         return res.status(200).json({
             success: true,
             message: "User added successfully",
-            data: { id: getUserId },
         });
 
     } catch (error) {
@@ -120,48 +149,32 @@ const addUser = async (req, res) => {
 };
 
 //=============================================================== U P D A T E  U S E R =========================================================================
-const updateUser = async (req, res) => {
+
+const updateMyProfile = async(req, res) => {
     try {
-        const { id, currentUserId } = req.params;
+        const { currentUserId } = req.params;
         const {
             first_name,
             last_name,
             birth_date,
-            email,
             phone_number,
+            street,
             region,
             province,
             municipality,
             barangay,
             zip_code,
-            role,
-            password,
-            confirm_password,
-            hired_date,
             ...otherData
         } = req.body;
 
-        const userRef = db.collection(collection.collections.usersCollections).doc(id);
+        const userRef = db.collection(users).doc(currentUserId);
         const userDoc = await userRef.get();
 
         if (!userDoc.exists) {
-            return res.status(404).json({ success: false, message: "User not found." });
+            return res.status(404).json({ success: false, message: "Need current User Id." });
         }
 
-        const userData = userDoc.data();
-        const uid = userData && userData.uid;
-
-        // Parse birth_date if present
-        let birthDateTimestamp;
-        let hiredDateTimestamp;
-        if (birth_date !== undefined || hired_date !== undefined) {
-            try {
-                birthDateTimestamp = Timestamp.fromDate(new Date(birth_date));
-                hiredDateTimestamp = Timestamp.fromDate(new Date(hired_date));
-            } catch (error) {
-                return res.status(400).json({ success: false, message: "Invalid birth_date format." });
-            }
-        }
+        const birthDateTimestamp = dateToTimeStamp(birth_date);
 
         const updatedData = {
             updatedAt: Timestamp.now(),
@@ -173,13 +186,13 @@ const updateUser = async (req, res) => {
             last_name,
             birth_date: birthDateTimestamp,
             phone_number,
+            street,
             region,
             province,
             municipality,
             barangay,
             zip_code,
-            role,
-            hired_date: hiredDateTimestamp,
+            ...otherData
         };
 
         for (const key in updatableFields) {
@@ -188,132 +201,105 @@ const updateUser = async (req, res) => {
             }
         }
 
-        // Email update logic
-        if (email !== undefined) {
-            const emailCheck = await db
-                .collection(collection.collections.usersCollections)
-                .where("email", "==", email)
-                .get();
-
-            const isUsedByAnother = !emailCheck.empty && emailCheck.docs.some(doc => doc.id !== id);
-            if (isUsedByAnother) {
-                return res.status(400).json({ success: false, message: "Email is already in use." });
-            }
-
-            if (uid) {
-                await admin.auth().updateUser(uid, { email });
-            }
-
-            updatedData.email = email;
-        }
-
         await userRef.update(updatedData);
 
-        const activityRef = db.collection(collection.collections.usersCollections).doc(currentUserId).collection(collection.subCollections.activities).doc();
+        const activityRef = db.collection(users).doc(currentUserId).collection(activities).doc();
 
         const activityData = {
-            title: `You updated the data of ${first_name}`,
+            title: `You have been updated your data`,
             createdAt: Timestamp.now(),
         }
 
         await activityRef.set(activityData);
-
         return res.status(200).json({ success: true, message: "User updated successfully." });
-
     } catch (error) {
-        console.error("Error updating user:", error);
-        return res.status(500).json({
-            success: false,
-            message: "Failed to update user",
-            error: error.message,
-        });
+        
     }
-};
+}
+// //=============================================================== U P D A T E  P A S S W O R D =========================================================================
 
-//=============================================================== U P D A T E  P A S S W O R D =========================================================================
+// const updatePassword = async (req, res) => {
+//     try {
+//         const { id } = req.params;
+//         const { old_password, new_password, confirm_new_password } = req.body;
 
-const updatePassword = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { old_password, new_password, confirm_new_password } = req.body;
+//         // Validate fields 
+//         if (!old_password || !new_password || !confirm_new_password) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "All password fields are required.",
+//             });
+//         }
 
-        // Validate fields 
-        if (!old_password || !new_password || !confirm_new_password) {
-            return res.status(400).json({
-                success: false,
-                message: "All password fields are required.",
-            });
-        }
+//         // Fetch user doc
+//         const userRef = db.collection(collection.collections.usersCollections).doc(id);
+//         const userSnap = await userRef.get();
 
-        // Fetch user doc
-        const userRef = db.collection(collection.collections.usersCollections).doc(id);
-        const userSnap = await userRef.get();
+//         if (!userSnap.exists) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "User not found.",
+//             });
+//         }
 
-        if (!userSnap.exists) {
-            return res.status(404).json({
-                success: false,
-                message: "User not found.",
-            });
-        }
+//         const userData = userSnap.data();
+//         const hashedOldPassword = userData.password;
+//         const uid = userData.uid;
 
-        const userData = userSnap.data();
-        const hashedOldPassword = userData.password;
-        const uid = userData.uid;
+//         // Compare old password
+//         const isMatch = await bcrypt.compare(old_password, hashedOldPassword);
+//         if (!isMatch) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "Old password is incorrect.",
+//             });
+//         }
 
-        // Compare old password
-        const isMatch = await bcrypt.compare(old_password, hashedOldPassword);
-        if (!isMatch) {
-            return res.status(400).json({
-                success: false,
-                message: "Old password is incorrect.",
-            });
-        }
+//         // Confirm passwords match
+//         if (new_password !== confirm_new_password) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "New passwords do not match.",
+//             });
+//         }
 
-        // Confirm passwords match
-        if (new_password !== confirm_new_password) {
-            return res.status(400).json({
-                success: false,
-                message: "New passwords do not match.",
-            });
-        }
+//         // Update Firebase Auth password if UID is available
+//         if (uid) {
+//             await admin.auth().updateUser(uid, {
+//                 password: new_password,
+//             });
+//         }
 
-        // Update Firebase Auth password if UID is available
-        if (uid) {
-            await admin.auth().updateUser(uid, {
-                password: new_password,
-            });
-        }
+//         // Hash new password and update Firestore
+//         const salt = await bcrypt.genSalt(10);
+//         const hashedNewPassword = await bcrypt.hash(new_password, salt);
 
-        // Hash new password and update Firestore
-        const salt = await bcrypt.genSalt(10);
-        const hashedNewPassword = await bcrypt.hash(new_password, salt);
+//         await userRef.update({
+//             password: hashedNewPassword,
+//         });
 
-        await userRef.update({
-            password: hashedNewPassword,
-        });
+//         const activityRef = db.collection(collection.collections.usersCollections).doc(id).collection(collection.subCollections.activities).doc();
 
-        const activityRef = db.collection(collection.collections.usersCollections).doc(id).collection(collection.subCollections.activities).doc();
+//         const activityData = {
+//             title: `You have successfully change your password`,
+//             createdAt: Timestamp.now(),
+//         }
 
-        const activityData = {
-            title: `You have successfully change your password`,
-            createdAt: Timestamp.now(),
-        }
+//         await activityRef.set(activityData);
 
-        await activityRef.set(activityData);
-
-        return res.status(200).json({
-            success: true,
-            message: "Password updated successfully.",
-        });
-    } catch (error) {
-        console.error("Error updating password:", error);
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error.",
-            error: error.message,
-        });
-    }
-};
+//         return res.status(200).json({
+//             success: true,
+//             message: "Password updated successfully.",
+//         });
+//     } catch (error) {
+//         console.error("Error updating password:", error);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Internal server error.",
+//             error: error.message,
+//         });
+//     }
+// };
 
 //=============================================================== L O G I N =========================================================================
 // const SECRET_KEY = "praetorian";
@@ -360,45 +346,45 @@ const updatePassword = async (req, res) => {
 //     }
 // };
 
-const loginUser = async (req, res) => {
-    try {
-        const { idToken } = req.body;
+// const loginUser = async (req, res) => {
+//     try {
+//         const { idToken } = req.body;
 
-        if (!idToken) {
-            return res.status(400).json({ success: false, message: "ID token is required." });
-        }
+//         if (!idToken) {
+//             return res.status(400).json({ success: false, message: "ID token is required." });
+//         }
 
-        const decodedToken = await admin.auth().verifyIdToken(idToken);
-        const { uid, email } = decodedToken;
+//         const decodedToken = await admin.auth().verifyIdToken(idToken);
+//         const { uid, email } = decodedToken;
 
-        const snapshot = await db.collection("users").where("uid", "==", uid).get();
+//         const snapshot = await db.collection("users").where("uid", "==", uid).get();
 
-        if (snapshot.empty) {
-            return res.status(404).json({ success: false, message: "User not found." });
-        }
+//         if (snapshot.empty) {
+//             return res.status(404).json({ success: false, message: "User not found." });
+//         }
 
-        const userDoc = snapshot.docs[0];
-        const userData = userDoc.data();
+//         const userDoc = snapshot.docs[0];
+//         const userData = userDoc.data();
 
-        return res.status(200).json({
-            success: true,
-            message: "Login successful",
-            user: {
-                email,
-                role: userData.role || null,
-                id: userData.id,
-            },
-        });
+//         return res.status(200).json({
+//             success: true,
+//             message: "Login successful",
+//             user: {
+//                 email,
+//                 role: userData.role || null,
+//                 id: userData.id,
+//             },
+//         });
 
-    } catch (error) {
-        console.error("Error verifying ID token:", error);
-        return res.status(401).json({
-            success: false,
-            message: "Unauthorized",
-            error: error.message,
-        });
-    }
-};
+//     } catch (error) {
+//         console.error("Error verifying ID token:", error);
+//         return res.status(401).json({
+//             success: false,
+//             message: "Unauthorized",
+//             error: error.message,
+//         });
+//     }
+// };
 
 
-module.exports = { addUser, updateUser, loginUser, updatePassword  };
+module.exports = { addUser, updateMyProfile };

@@ -1,9 +1,9 @@
-const express = require("express");
-const { deleteNotification, deleteAllNotifications } = require("../controllers/notificationController");
+// const express = require("express");
+// const { deleteNotification, deleteAllNotifications } = require("../controllers/notificationController");
 
-const router = express.Router();
+// const router = express.Router();
 
-router.delete("/:user_id/:notification_id", deleteNotification);
-router.delete("/:user_id", deleteAllNotifications);
+// router.delete("/:user_id/:notification_id", deleteNotification);
+// router.delete("/:user_id", deleteAllNotifications);
 
-module.exports = router;
+// module.exports = router;
