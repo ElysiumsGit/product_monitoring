@@ -1,10 +1,11 @@
-// const express = require("express")
-// const { assignTeam, updateTeam, deleteTeam } = require("../controllers/teamController")
+const express = require("express")
+const { assignTeam, getUsersByTeam, updateTeam, deleteTeam } = require("../controllers/teamController")
 
-// const router = express.Router();
+const router = express.Router();
 
-// router.post("/", assignTeam);
-// router.put("/:id", updateTeam);
-// router.delete("/:id", deleteTeam);
+router.post("/addTeam/:currentUserId", assignTeam);
+router.get("/getTeam/:teamId", getUsersByTeam);
+router.put("/updateTeam/:id/:currentUserId", updateTeam);
+router.delete("/deleteTeam/:id", deleteTeam);
 
-// module.exports = router;
+module.exports = router;

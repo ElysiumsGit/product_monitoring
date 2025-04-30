@@ -1,9 +1,8 @@
 const { firestore } = require("firebase-admin");
 const { Timestamp } = require("firebase-admin/firestore");
-const bcrypt = require("bcryptjs");
 const admin = require("firebase-admin");
-const { get } = require("../routes/userRoute");
 const { users, activities, notifications, dateToTimeStamp } = require("../utils/utils");
+const { renderErrorPage } = require("../errors/error");
 
 const db = firestore();
 
@@ -48,9 +47,6 @@ const addUser = async (req, res) => {
         const hiredDateTimestamp = dateToTimeStamp(hired_date);
         const birthDateTimestamp = dateToTimeStamp(birth_date);
 
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-
         const userRef = db.collection(users).doc();
 
         let emailExists = false;
@@ -63,21 +59,24 @@ const addUser = async (req, res) => {
                 return res.status(500).json({ success: false, message: error.message });
             }
         }
-    
+        let getUID;
+
         if (emailExists) {
             return res.status(400).json({ success: false, message: "Email already exists." });
         }
         else{
-            await admin.auth().createUser({
+            getUID = await admin.auth().createUser({
                 email,
                 password,
             });
         }
-            
+        
+        const getUserUID = getUID.uid;
         const getUserId = userRef.id;
 
         const userData = {
             id: getUserId,
+            uid: getUserUID,
             first_name, 
             last_name, 
             birth_date: birthDateTimestamp, 
@@ -90,7 +89,6 @@ const addUser = async (req, res) => {
             zip_code,
             role, 
             hired_date: hiredDateTimestamp,
-            password: hashedPassword,
             ...otherData,
             createdAt: Timestamp.now(),
         };
@@ -216,148 +214,199 @@ const updateMyProfile = async(req, res) => {
         
     }
 }
-// //=============================================================== U P D A T E  P A S S W O R D =========================================================================
 
-// const updatePassword = async (req, res) => {
-//     try {
-//         const { id } = req.params;
-//         const { old_password, new_password, confirm_new_password } = req.body;
+//=============================================================== U P D A T E  P A S S W O R D =========================================================================
+const updatePassword = async (req, res) => {
+    try {
+        const { currentUserId } = req.params;
+        const { new_password, confirm_new_password } = req.body;
 
-//         // Validate fields 
-//         if (!old_password || !new_password || !confirm_new_password) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "All password fields are required.",
-//             });
-//         }
+        if (!new_password || !confirm_new_password) {
+            return res.status(400).json({
+                success: false,
+                message: "All password fields are required.",
+            });
+        }
 
-//         // Fetch user doc
-//         const userRef = db.collection(collection.collections.usersCollections).doc(id);
-//         const userSnap = await userRef.get();
+        if (new_password !== confirm_new_password) {
+            return res.status(400).json({
+                success: false,
+                message: "New passwords do not match.",
+            });
+        }
 
-//         if (!userSnap.exists) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: "User not found.",
-//             });
-//         }
+        // Get the user document
+        const userRef = db.collection('users').doc(currentUserId);
+        const userSnap = await userRef.get();
 
-//         const userData = userSnap.data();
-//         const hashedOldPassword = userData.password;
-//         const uid = userData.uid;
+        if (!userSnap.exists) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found.",
+            });
+        }
 
-//         // Compare old password
-//         const isMatch = await bcrypt.compare(old_password, hashedOldPassword);
-//         if (!isMatch) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "Old password is incorrect.",
-//             });
-//         }
+        const { uid } = userSnap.data();
 
-//         // Confirm passwords match
-//         if (new_password !== confirm_new_password) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "New passwords do not match.",
-//             });
-//         }
+        if (!uid) {
+            return res.status(400).json({
+                success: false,
+                message: "UID not found in user document.",
+            });
+        }
 
-//         // Update Firebase Auth password if UID is available
-//         if (uid) {
-//             await admin.auth().updateUser(uid, {
-//                 password: new_password,
-//             });
-//         }
+        // Update Firebase Auth password
+        await admin.auth().updateUser(uid, {
+            password: new_password,
+        });
 
-//         // Hash new password and update Firestore
-//         const salt = await bcrypt.genSalt(10);
-//         const hashedNewPassword = await bcrypt.hash(new_password, salt);
+        // Log activity
+        const activityRef = userRef.collection('activities').doc();
+        await activityRef.set({
+            title: "You have successfully changed your password.",
+            createdAt: Timestamp.now(),
+        });
 
-//         await userRef.update({
-//             password: hashedNewPassword,
-//         });
+        return res.status(200).json({
+            success: true,
+            message: "Password updated successfully.",
+        });
+    } catch (error) {
+        console.error("Error updating password:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error.",
+            error: error.message,
+        });
+    }
+};
 
-//         const activityRef = db.collection(collection.collections.usersCollections).doc(id).collection(collection.subCollections.activities).doc();
+//=============================================================== G E T =========================================================================
+const getAllUsers = async (req, res) => {
+    try {
+        const userRef = db.collection(users); 
+        const userSnapshot = await userRef.get();
+        
+        if (userSnapshot.empty) {
+            return res.status(200).json({
+                success: true,
+                message: "No data found.",
+                data: [],
+            });
+        }
 
-//         const activityData = {
-//             title: `You have successfully change your password`,
-//             createdAt: Timestamp.now(),
-//         }
+        const data = [];
+        userSnapshot.forEach(doc => {
+            data.push({ ...doc.data() });
+        });
 
-//         await activityRef.set(activityData);
+        res.status(200).json({ success: true, data });
+    } catch (error) {
+        console.error("Error fetching users:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error.",
+            error: error.message,
+        });
+    }
+};
 
-//         return res.status(200).json({
-//             success: true,
-//             message: "Password updated successfully.",
-//         });
-//     } catch (error) {
-//         console.error("Error updating password:", error);
-//         return res.status(500).json({
-//             success: false,
-//             message: "Internal server error.",
-//             error: error.message,
-//         });
-//     }
-// };
+const getUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const userRef = db.collection(users).doc(id);
+        const doc = await userRef.get(); 
+
+        if (!doc.exists) {
+            return res
+            .status(403)
+            .send(renderErrorPage(
+                "404 – Page Not Found",
+                "The page you’re looking for doesn’t exist.",
+                "Please check the URL for any mistakes."
+            ));
+        }
+
+        const userData = doc.data();
+
+        return res.status(200).json({ success: true, data: userData });
+    } catch (error) {
+        console.error("Error fetching user:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error.",
+            error: error.message,
+        });
+    }
+};
 
 //=============================================================== L O G I N =========================================================================
-// const SECRET_KEY = "praetorian";
-// const loginUser = async (req, res) => {
+const loginUser = async (req, res) => {
+    try {
+        const { idToken } = req.body;
+
+        if (!idToken) {
+            return res.status(400).json({ success: false, message: "ID token is required." });
+        }
+
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        const { uid, email } = decodedToken;
+
+        let snapshot = await db.collection("users").where("uid", "==", uid).get();
+
+        if (snapshot.empty && email) {
+            snapshot = await db.collection("users").where("email", "==", email).get();
+        }
+
+        if (snapshot.empty) {
+            return res.status(404).json({ success: false, message: "Email already use." });
+        }
+
+        const userDoc = snapshot.docs[0];
+        const userData = userDoc.data();
+
+        if (userData.isDeleted === true) {
+            return res.status(404).json({ success: false, message: "User not found." });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Login successful",
+            user: userData
+        });
+
+    } catch (error) {
+        console.error("Error verifying ID token:", error);
+        return res.status(401).json({
+            success: false,
+            message: "Unauthorized",
+            error: error.message,
+        });
+    }
+};
+
+
+// const getUserData = async (req, res) => {
 //     try {
-//         const { email, password } = req.body;
-
-//         if (!email || !password) {
-//             return res.status(400).json({ success: false, message: "Email and password are required." });
-//         }
-
-//         const userSnapshot = await db.collection(collection.collections.usersCollections).where("email", "==", email).get();
-//         if (userSnapshot.empty) {
-//             return res.status(400).json({ success: false, message: "Invalid email ssword." });
-//         }
-
-//         const userData = userSnapshot.docs[0].data();
-        
-//         const isMatch = await bcrypt.compare(password, userData.password);
-//         if (!isMatch) {
-//             return res.status(400).json({ success: false, message: "Invalid emssssail ssword." });
-//         } 
-
-//         const token = jwt.sign(
-//             { id: userData.id, email: userData.email, role: userData.role },
-//             SECRET_KEY,
-//             { expiresIn: "2h" }
-//         );
-
-//         return res.status(200).json({
-//             success: true,
-//             message: "Login successful",
-//             token,
-//             user: { id: userData.id, email: userData.email, role: userData.role }
-//         });
-
+//         res.send("Hello World");
 //     } catch (error) {
-//         console.error("Error logging in:", error);
-//         return res.status(500).json({
-//             success: false,
-//             message: "Failed to login",
-//             error: error.message,
-//         });
+//         console.log(error);
 //     }
-// };
+// }
 
-// const loginUser = async (req, res) => {
+// const getUserData = async (req, res) => {
 //     try {
-//         const { idToken } = req.body;
-
-//         if (!idToken) {
-//             return res.status(400).json({ success: false, message: "ID token is required." });
+//         const authHeader = req.headers.authorization;
+//         if (!authHeader || !authHeader.startsWith('Bearer ')) {
+//             return res.status(401).json({ success: false, message: "No token provided" });
 //         }
 
+//         const idToken = authHeader.split(' ')[1];
 //         const decodedToken = await admin.auth().verifyIdToken(idToken);
-//         const { uid, email } = decodedToken;
+//         const { uid } = decodedToken;
 
-//         const snapshot = await db.collection("users").where("uid", "==", uid).get();
+//         const snapshot = await db.collection('users').where('uid', '==', uid).get();
 
 //         if (snapshot.empty) {
 //             return res.status(404).json({ success: false, message: "User not found." });
@@ -368,23 +417,17 @@ const updateMyProfile = async(req, res) => {
 
 //         return res.status(200).json({
 //             success: true,
-//             message: "Login successful",
-//             user: {
-//                 email,
-//                 role: userData.role || null,
-//                 id: userData.id,
-//             },
+//             user: userData,  
 //         });
 
 //     } catch (error) {
-//         console.error("Error verifying ID token:", error);
-//         return res.status(401).json({
+//         console.error('Error fetching user data:', error);
+//         return res.status(500).json({
 //             success: false,
-//             message: "Unauthorized",
+//             message: 'Failed to fetch user data',
 //             error: error.message,
 //         });
 //     }
-// };
+// }
 
-
-module.exports = { addUser, updateMyProfile };
+module.exports = { addUser, updateMyProfile, updatePassword, getAllUsers, getUser, loginUser };

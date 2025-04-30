@@ -22,6 +22,7 @@ const subCollections = {
 const users = "users";
 const notifications = "notifications";
 const activities = "activities";
+const team = "team";
 
 const dateToTimeStamp = (date) => {
     try { 
@@ -37,6 +38,7 @@ module.exports = {
     users, 
     notifications,
     activities,
+    team,
     dateToTimeStamp 
 };
 
