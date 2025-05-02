@@ -38,7 +38,7 @@ const addGroup = async(req, res) => {
         const data = {
             group_id: getRegionId,
             group_name,
-            createdAt: Timestamp.now(),
+            created_at: Timestamp.now(),
         }
 
         await regionRef.set(data);

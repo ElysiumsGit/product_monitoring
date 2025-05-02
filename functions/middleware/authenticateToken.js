@@ -7,21 +7,13 @@ const authenticateToken = async (req, res, next) => {
     if (!authHeader) {
         return res
             .status(401)
-            .send(renderErrorPage(
-                "404 – Page Not Found",
-                "The page you’re looking for doesn’t exist.",
-                "Please check the URL for any mistakes."
-            ));
+            .send(renderErrorPage());
     }
 
     if (!authHeader.startsWith('Bearer ')) {
         return res
             .status(401)
-            .send(renderErrorPage(
-                "404 – Page Not Found",
-                "The page you’re looking for doesn’t exist.",
-                "Please check the URL for any mistakes."
-            ));
+            .send(renderErrorPage());
     }
 
     const idToken = authHeader.split('Bearer ')[1];
@@ -34,11 +26,7 @@ const authenticateToken = async (req, res, next) => {
         console.error('Error verifying token:', error.message);
         return res
             .status(403)
-            .send(renderErrorPage(
-                "404 – Page Not Found",
-                "The page you’re looking for doesn’t exist.",
-                "Please check the URL for any mistakes."
-            ));
+            .send(renderErrorPage());
     }
 };
 

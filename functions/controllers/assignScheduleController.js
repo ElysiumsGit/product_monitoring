@@ -53,16 +53,16 @@ const db = firestore();
 //                 .collection("schedules")
 //                 .doc();
 
-//             const createdAt = Timestamp.now();
+//             const created_at = Timestamp.now();
 
 //             await userScheduleRef.set({
 //                 store: storeId,
 //                 same_time,
-//                 createdAt,
+//                 created_at,
 //             });
 
 //             for (const pattern of weekly_pattern) {
-//                 const date = getNextWeekdayDate(createdAt, pattern.day);
+//                 const date = getNextWeekdayDate(created_at, pattern.day);
 
 //                 const dayScheduleRef = userScheduleRef.collection("days").doc();
 //                 await dayScheduleRef.set({
@@ -82,7 +82,7 @@ const db = firestore();
 //                 message: `You're assigned to ${storeId}.`,
 //                 type: "schedule",
 //                 read: false,
-//                 createdAt,
+//                 created_at,
 //             });
 //         }
 
@@ -193,7 +193,7 @@ const assignStoreSchedule = async (req, res) => {
       // Create the main schedule doc
       await scheduleRef.set({
         store: storeId,
-        createdAt: Timestamp.now(),
+        created_at: Timestamp.now(),
         assignedBy: "system", // optional: if you want to track who assigned
       });
 
@@ -232,7 +232,7 @@ const assignStoreSchedule = async (req, res) => {
         title: `You have been scheduled to ${storeId}`,
         isRead: false,
         type: "schedule",
-        createdAt: Timestamp.now(),
+        created_at: Timestamp.now(),
       });
     }
 

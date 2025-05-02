@@ -19,7 +19,7 @@ const inventoryAssign = async (req, res) => {
         inventoryProducts.map((product) => {
             const productRef = storeRef.doc(); 
             const inventoryId = productRef.id;
-            const productData = { ...product, inventory_id: inventoryId, createdAt: Timestamp.now() };
+            const productData = { ...product, inventory_id: inventoryId, created_at: Timestamp.now() };
             
             batch.set(productRef, productData);
             return productData; 

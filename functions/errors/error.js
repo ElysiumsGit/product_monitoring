@@ -1,88 +1,91 @@
-const renderErrorPage = (title, message, hint) => `
+const renderErrorPage = () => `
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>${title}</title>
+  <title>Site Can’t Be Reached</title>
   <style>
-    :root {
-      --main-color: #dc3545;
-      --bg-color: #f8f9fa;
-      --text-color: #333;
-      --hint-color: #666;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
     body {
       margin: 0;
       padding: 0;
-      background-color: var(--bg-color);
-      color: var(--text-color);
+      background-color: #1e1e1e;
+      color: #ccc;
       font-family: 'Segoe UI', sans-serif;
+      height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
     }
 
-    .container {
-      background-color: #fff;
-      border: 1px solid #ddd;
-      padding: 2rem;
-      border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      max-width: 90%;
-      width: 500px;
-      text-align: center;
+    .outerContainer {
+      width: 600px;
+      height: 400px;
+      display: flex;
+      justify-content: flex-start;
+      align-items: flex-start;
     }
 
-    h1 {
-      color: var(--main-color);
-      font-size: 2rem;
+    .bodyContent {
+      text-align: left;
+    }
+
+    .icon {
+      font-size: 48px;
       margin-bottom: 1rem;
     }
 
+    h1 {
+      font-size: 1.5rem;
+      color: #e0e0e0;
+      margin-bottom: 0.5rem;
+    }
+
     p {
-      font-size: 1.1rem;
-      margin: 0.5rem 0;
+      margin: 0.3rem 0;
+      font-size: 1rem;
     }
 
-    small {
-      color: var(--hint-color);
-      font-size: 0.9rem;
+    a {
+      color: #4da3ff;
+      text-decoration: none;
     }
 
-    @media (max-width: 600px) {
-      .container {
-        padding: 1.5rem 1rem;
-      }
+    .code {
+      font-size: 0.85rem;
+      color: #777;
+      margin-top: 1rem;
+    }
 
-      h1 {
-        font-size: 1.5rem;
-      }
+    button {
+      margin-top: 1.5rem;
+      padding: 0.5rem 1.5rem;
+      background-color: #4da3ff;
+      border: none;
+      color: white;
+      font-size: 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
 
-      p {
-        font-size: 1rem;
-      }
-
-      small {
-        font-size: 0.85rem;
-      }
+    button:hover {
+      background-color: #357ee5;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>${title}</h1>
-    <p>${message}</p>
-    <small>${hint}</small>
+  <div class="outerContainer">
+    <div class="bodyContent">
+      <div class="icon">📄</div>
+      <h1>This site can’t be reached</h1>
+      <p>Check if there is a typo in <strong>https://app-m4gsgw27rq-uc.a.run.app</strong>.</p>
+      <p>If spelling is correct, <a href="#">try running Windows Network Diagnostics</a>.</p>
+      <div class="code">DNS_PROBE_FINISHED_NXDOMAIN</div>
+      <button onclick="location.reload()">Reload</button>
+    </div>
   </div>
 </body>
 </html>
 `;
 
-module.exports = { renderErrorPage }
+module.exports = { renderErrorPage };

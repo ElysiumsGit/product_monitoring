@@ -37,7 +37,7 @@ const addStore = async (req, res) => {
             phone_number,
             display_information,
             ...other_data,
-            createdAt: Timestamp.now(),
+            created_at: Timestamp.now(),
         };
 
         await storeRef.set(storeData);
@@ -61,7 +61,7 @@ const addStore = async (req, res) => {
             const notificationData = {
                 id: notificationRef.id,
                 message: `${store_name} store has been created and is ready for team assignment`,
-                createdAt: Timestamp.now(),
+                created_at: Timestamp.now(),
                 isRead: false,
                 type: "store",
             };
@@ -75,7 +75,7 @@ const addStore = async (req, res) => {
 
         const activityData = {
             title: `You added ${store_name}`,
-            createdAt: Timestamp.now(),
+            created_at: Timestamp.now(),
         }
 
         await activityRef.set(activityData);
@@ -95,6 +95,8 @@ const addStore = async (req, res) => {
         });
     }
 };
+
+//=============================================================== U P D A T E   S T O R E =========================================================================
 
 const updateStore = async(req, res) => {
     try {
@@ -171,7 +173,7 @@ const deleteStore = async(req, res) => {
             const notificationData = {
                 id: notificationRef.id,
                 message: `${store_name} store has been created and is ready for team assignment`,
-                createdAt: Timestamp.now(),
+                created_at: Timestamp.now(),
                 isRead: false,
                 type: "store",
             };

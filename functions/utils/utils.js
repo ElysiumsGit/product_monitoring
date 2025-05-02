@@ -23,10 +23,24 @@ const users = "users";
 const notifications = "notifications";
 const activities = "activities";
 const team = "team";
+const products = "products";
 
-const dateToTimeStamp = (date) => {
-    try { 
-        return Timestamp.fromDate(new Date(date));
+// const dateToTimeStamp = (date) => {
+//     try { 
+//         return Timestamp.fromDate(new Date(date));
+//     } catch (error) {
+//         return { success: false, message: "Invalid date format." };
+//     }
+// };
+
+
+const dateToTimeStamp = (dateStr) => {
+    try {
+        const [month, day, year] = dateStr.split("/").map(Number);
+        const date = new Date(year, month - 1, day); 
+        const time = Timestamp.fromDate(date);
+
+        return time;
     } catch (error) {
         return { success: false, message: "Invalid date format." };
     }
@@ -39,8 +53,10 @@ module.exports = {
     notifications,
     activities,
     team,
+    products,
     dateToTimeStamp 
 };
+
 
 
 

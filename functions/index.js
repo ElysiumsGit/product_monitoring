@@ -11,17 +11,15 @@ admin.initializeApp({
 
 const userRoute = require("./routes/userRoute");
 const teamRoute = require("./routes/teamRoute");
-// const productRoute = require("./routes/productRoute");
+const productRoute = require("./routes/productRoute");
+const notificationRoute = require("./routes/notificationRoute");
+
 // const storeRoute = require("./routes/storeRoute");
 // const inventoryRoute = require("./routes/inventoryRoute");
-// const notificationRoute = require("./routes/notificationRoute");
 // const categoryRoute = require("./routes/categoryRoute");
 // const groupRoute = require("./routes/groupRoute");
 // const scheduleRoute = require("./routes/scheduleRoute");
 const automationRoute = require("./routes/automationRoute");
-
-
-
 
 const express = require('express');
 const app = express();
@@ -33,21 +31,17 @@ app.use(express.json());
 
 app.use("/userRoute", userRoute);
 app.use("/teamRoute", teamRoute);
+app.use("/productRoute", productRoute);
+app.use("/notificationRoute", notificationRoute);
 
-// app.use("/productRoute", productRoute);
 // app.use("/storeRoute", storeRoute);
 // app.use("/inventoryRoute", inventoryRoute);
-// app.use("/notificationRoute", notificationRoute);
 // app.use("/categoryRoute", categoryRoute);
 // app.use("/groupRoute", groupRoute);
 // app.use("/scheduleRoute", scheduleRoute);
 app.use("/", automationRoute);
 app.use((req, res) => {
-    res.send(renderErrorPage(
-        "404 – Page Not Found",
-        "The page you’re looking for doesn’t exist.",
-        "Please check the URL for any mistakes."
-    ));
+    res.send(renderErrorPage());
 });
 
 exports.app = functions.https.onRequest(app);

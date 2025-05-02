@@ -19,7 +19,7 @@ const assignTeam = async(req, res) => {
         await teamRef.set({
             id: teamId,
             team_name,
-            createdAt: Timestamp.now(),
+            created_at: Timestamp.now(),
         })
 
         for(const userIds of teams){
@@ -44,7 +44,7 @@ const assignTeam = async(req, res) => {
                 id: getNotificationId,
                 title: `You have been added to ${team_name}`,
                 isRead: false,
-                createdAt: Timestamp.now(),
+                created_at: Timestamp.now(),
             })
         }
 
@@ -54,7 +54,7 @@ const assignTeam = async(req, res) => {
         await activityRef.set({
             id: getActivityId,
             title: `You added a team named ${team_name}`,
-            createdAt: Timestamp.now(),
+            created_at: Timestamp.now(),
         });
 
 
@@ -99,8 +99,6 @@ const getUsersByTeam = async (req, res) => {
     }
 };
 
-
-
 //=============================================================== U P D A T E  T E A M =========================================================================
 const updateTeam = async (req, res) => {
     try {
@@ -129,7 +127,7 @@ const updateTeam = async (req, res) => {
         await activityRef.set({
             id: activityRef.id,
             title: `You updated the ${team_name}`,
-            createdAt: Timestamp.now(),
+            created_at: Timestamp.now(),
         });
 
         // Fetch current users in the team
@@ -145,7 +143,7 @@ const updateTeam = async (req, res) => {
                     id: notificationRef.id,
                     title: `Team name has been changed to ${team_name}`,
                     isRead: false,
-                    createdAt: Timestamp.now(),
+                    created_at: Timestamp.now(),
                 });
             }
         }
@@ -162,7 +160,7 @@ const updateTeam = async (req, res) => {
                 id: notificationRef.id,
                 title: `You have been removed from ${team_name}`,
                 isRead: false,
-                createdAt: Timestamp.now(),
+                created_at: Timestamp.now(),
             });
         }
 
@@ -177,7 +175,7 @@ const updateTeam = async (req, res) => {
                     id: notificationRef.id,
                     title: `You have been added to ${team_name}`,
                     isRead: false,
-                    createdAt: Timestamp.now(),
+                    created_at: Timestamp.now(),
                 });
             }
 
@@ -230,7 +228,7 @@ const deleteTeam = async (req, res) => {
             await notifRef.set({
                 notification_id: notifRef.id,
                 message: `The team ${team_name} you were part of has been deleted.`,
-                createdAt: Timestamp.now(),
+                created_at: Timestamp.now(),
                 type: "team",
                 isRead: false
             });

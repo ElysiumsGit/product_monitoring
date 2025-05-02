@@ -3,6 +3,8 @@ const { collections, subCollections } = require("../utils/utils");
 
 const db = firestore();
 
+//=============================================================== D E L E T E    N O T I F I C A T I O N =========================================================================
+
 const deleteNotification = async (req, res) => {
     try {
         const { user_id, notification_id } = req.params;
@@ -44,6 +46,8 @@ const deleteNotification = async (req, res) => {
     }
 };
 
+//=============================================================== D E L E T E   A L L   N O T I F I C A T I O N =========================================================================
+
 const deleteAllNotifications = async (req, res) => {
     try {
         const { user_id } = req.params;
@@ -83,4 +87,27 @@ const deleteAllNotifications = async (req, res) => {
     }
 };
 
-module.exports = { deleteNotification, deleteAllNotifications };
+//=============================================================== G E T   N O T I F I C A T I O N =========================================================================
+
+const getNotification = async (req, res) => {
+    try {
+        const { currentUserId } = req.params;
+
+        const notificationsRef = db.collection("users").doc(currentUserId).collection("notifications");
+        const snapshot = await notificationsRef.orderBy("created_at", "desc").get();
+
+        const notifications = [];
+
+        snapshot.forEach(doc => {
+            notifications.push({ ...doc.data() });
+        });
+
+        return res.status(200).json({ success: true, notifications });
+
+    } catch (error) {
+        console.error("Error fetching notifications", error);
+        return res.status(500).json({ success: false, message: "Failed to get notifications" });
+    }
+};
+
+module.exports = { deleteNotification, deleteAllNotifications, getNotification };

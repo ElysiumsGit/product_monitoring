@@ -17,7 +17,7 @@ const addUser = async (req, res) => {
             last_name, 
             birth_date, 
             email, 
-            phone_number,
+            mobile_number,
             region, 
             province, 
             municipality, 
@@ -29,11 +29,12 @@ const addUser = async (req, res) => {
             uid,
             hired_date,
             collectionName,
+            team,
             ...otherData
         } = req.body;
 
         if (
-            !first_name || !last_name || !birth_date || !email || !phone_number ||
+            !first_name || !last_name || !birth_date || !email || !mobile_number ||
             !region || !province || !municipality || !barangay || !zip_code ||
             !role || !password || !confirm_password
         ) {
@@ -81,16 +82,17 @@ const addUser = async (req, res) => {
             last_name, 
             birth_date: birthDateTimestamp, 
             email, 
-            phone_number,
+            mobile_number,
             region, 
             province, 
             municipality, 
             barangay, 
             zip_code,
             role, 
+            team: "",
             hired_date: hiredDateTimestamp,
             ...otherData,
-            createdAt: Timestamp.now(),
+            created_at: Timestamp.now(),
         };
 
         await userRef.set(userData);
@@ -99,7 +101,7 @@ const addUser = async (req, res) => {
 
         const activityData = {
             title: `You have successfully added ${first_name} with a role of ${role}`,
-            createdAt: Timestamp.now(),
+            created_at: Timestamp.now(),
         }
 
         await activityRef.set(activityData);
@@ -123,7 +125,7 @@ const addUser = async (req, res) => {
             const notificationData = {
                 id: notificationRef.id,
                 message: `${first_name} has been added to users with a role of ${role}`,
-                createdAt: Timestamp.now(),
+                created_at: Timestamp.now(),
                 isRead: false,
                 type: "users",
             };
@@ -134,6 +136,7 @@ const addUser = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: "User added successfully",
+            userData
         });
 
     } catch (error) {
@@ -155,7 +158,7 @@ const updateMyProfile = async(req, res) => {
             first_name,
             last_name,
             birth_date,
-            phone_number,
+            mobile_number,
             street,
             region,
             province,
@@ -183,7 +186,7 @@ const updateMyProfile = async(req, res) => {
             first_name,
             last_name,
             birth_date: birthDateTimestamp,
-            phone_number,
+            mobile_number,
             street,
             region,
             province,
@@ -205,7 +208,7 @@ const updateMyProfile = async(req, res) => {
 
         const activityData = {
             title: `You have been updated your data`,
-            createdAt: Timestamp.now(),
+            created_at: Timestamp.now(),
         }
 
         await activityRef.set(activityData);
@@ -264,7 +267,7 @@ const updatePassword = async (req, res) => {
         const activityRef = userRef.collection('activities').doc();
         await activityRef.set({
             title: "You have successfully changed your password.",
-            createdAt: Timestamp.now(),
+            created_at: Timestamp.now(),
         });
 
         return res.status(200).json({
@@ -370,17 +373,38 @@ const loginUser = async (req, res) => {
             return res.status(404).json({ success: false, message: "User not found." });
         }
 
-        return res.status(200).json({
-            success: true,
-            message: "Login successful",
-            user: userData
-        });
+        if(!userData.team){
+            return res.status(200).json({
+                success: true,
+                message: "Login successful",
+                user: userData,
+            });
+        }   
+        else{
+            const teamSnapshot = await db.collection("team").doc(userData.team).get();
+
+            let teamName = null;
+
+            if (teamSnapshot.exists && userData.team) {
+                const teamData = teamSnapshot.data();
+                teamName = teamData.team_name || null;
+
+                return res.status(200).json({
+                    success: true,
+                    message: "Login successful",
+                    user: {
+                        userData,
+                        team_name: teamName
+                    },
+                });
+            }
+        }
 
     } catch (error) {
         console.error("Error verifying ID token:", error);
         return res.status(401).json({
             success: false,
-            message: "Unauthorized",
+            message: "Unautorized",
             error: error.message,
         });
     }
