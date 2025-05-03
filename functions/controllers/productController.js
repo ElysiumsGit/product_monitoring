@@ -188,6 +188,7 @@ const deleteProduct = async(req, res) => {
         await logUserActivity(currentUserId, `You have deleted a product`);
         await productRef.update({
             isDeleted: true,
+            deleted_at: Timestamp.now(),
         });
 
         return res.status(200).json({success: true, message: "Deleted Product Success"})

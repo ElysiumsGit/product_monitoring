@@ -1,5 +1,4 @@
 const { firestore } = require("firebase-admin");
-const { collections, subCollections } = require("../utils/utils");
 
 const db = firestore();
 
@@ -7,21 +6,16 @@ const db = firestore();
 
 const deleteNotification = async (req, res) => {
     try {
-        const { user_id, notification_id } = req.params;
+        const { currentUserId, notification_id } = req.params;
 
-        if (!user_id || !notification_id) {
+        if (!currentUserId || !notification_id) {
             return res.status(400).json({
                 success: false,
                 message: "All fields are required"
             });
         }
 
-        const notificationRef = db
-            .collection(collections.usersCollections)
-            .doc(user_id)
-            .collection(collections.notifications)
-            .doc(notification_id);
-
+        const notificationRef = db.collection("users").doc(currentUserId).collection("notifications").doc(notification_id);
         const doc = await notificationRef.get();
 
         if (!doc.exists) {
@@ -50,13 +44,9 @@ const deleteNotification = async (req, res) => {
 
 const deleteAllNotifications = async (req, res) => {
     try {
-        const { user_id } = req.params;
+        const { currentUserId } = req.params;
 
-        const notificationsRef = db
-            .collection(collections.usersCollections)
-            .doc(user_id)
-            .collection(subCollections.notifications);
-
+        const notificationsRef = db.collection(collections.usersCollections).doc(currentUserId).collection(subCollections.notifications);
         const snapshot = await notificationsRef.get();
 
         if (snapshot.empty) {
@@ -89,25 +79,25 @@ const deleteAllNotifications = async (req, res) => {
 
 //=============================================================== G E T   N O T I F I C A T I O N =========================================================================
 
-const getNotification = async (req, res) => {
-    try {
-        const { currentUserId } = req.params;
+// const getNotification = async (req, res) => {
+//     try {
+//         const { currentUserId } = req.params;
 
-        const notificationsRef = db.collection("users").doc(currentUserId).collection("notifications");
-        const snapshot = await notificationsRef.orderBy("created_at", "desc").get();
+//         const notificationsRef = db.collection("users").doc(currentUserId).collection("notifications");
+//         const snapshot = await notificationsRef.orderBy("created_at", "desc").get();
 
-        const notifications = [];
+//         const notifications = [];
 
-        snapshot.forEach(doc => {
-            notifications.push({ ...doc.data() });
-        });
+//         snapshot.forEach(doc => {
+//             notifications.push({ ...doc.data() });
+//         });
 
-        return res.status(200).json({ success: true, notifications });
+//         return res.status(200).json({ success: true, notifications });
 
-    } catch (error) {
-        console.error("Error fetching notifications", error);
-        return res.status(500).json({ success: false, message: "Failed to get notifications" });
-    }
-};
+//     } catch (error) {
+//         console.error("Error fetching notifications", error);
+//         return res.status(500).json({ success: false, message: "Failed to get notifications" });
+//     }
+// };
 
-module.exports = { deleteNotification, deleteAllNotifications, getNotification };
+module.exports = { deleteNotification, deleteAllNotifications };
