@@ -49,13 +49,13 @@ const updateStock = async (req, res) => {
             return res.status(404).json({ success: false, message: "Inventory id not found" });
         }
             
-        const inventoryUpdateData = {
+        const inventoryupdated_ata = {
             unit: unit,
             quantity: quantity,
-            updatedAt: Timestamp.now(),
+            updated_at: Timestamp.now(),
         }
 
-        await inventoryRef.update(inventoryUpdateData)
+        await inventoryRef.update(inventoryupdated_ata)
 
         return res.status(200).json({ success: true, message: "Inventory updated successfully" });
     } catch (error) {
@@ -82,7 +82,7 @@ const updateTreshold = async (req, res) => {
 
         const updatedTreshold = {
             treshold,
-            updatedAt: Timestamp.now()
+            updated_at: Timestamp.now()
         }
 
         await inventoryRef.update(updatedTreshold)

@@ -46,7 +46,7 @@ const addGroup = async(req, res) => {
         const updateStorePromise = storeIds.map(async (id) => {
             const storeRef = db.collection(collections.storesCollection).doc(id);
 
-            await storeRef.update({group: getRegionId, updatedAt: Timestamp.now()});
+            await storeRef.update({group: getRegionId, updated_at: Timestamp.now()});
         })
 
         await Promise.all(updateStorePromise);
@@ -104,19 +104,19 @@ const updateGroup = async (req, res) => {
         // Remove group from old stores
         const removeOldStore = removedStoreIds.map(async storeId => {
             const storeRef = db.collection(collections.storesCollection).doc(storeId);
-            await storeRef.update({ group: firestore.FieldValue.delete(), updatedAt: Timestamp.now() });
+            await storeRef.update({ group: firestore.FieldValue.delete(), updated_at: Timestamp.now() });
         });
 
         // Assign group to new stores
         const updateNewStores = addedStoreIds.map(async storeId => {
             const storeRef = db.collection(collections.storesCollection).doc(storeId);
-            await storeRef.update({ group: id, updatedAt: Timestamp.now() });
+            await storeRef.update({ group: id, updated_at: Timestamp.now() });
         });
 
         // Update group document
         await groupRef.update({
             group_name,
-            updatedAt: Timestamp.now(),
+            updated_at: Timestamp.now(),
         });
 
         await Promise.all([...removeOldStore, ...updateNewStores]);
@@ -157,7 +157,7 @@ const deleteGroup = async(req, res) => {
 
             await storeRef.update({
                 group: firestore.FieldValue.delete(),
-                updatedAt: Timestamp.now(),
+                updated_at: Timestamp.now(),
             })
         });
 

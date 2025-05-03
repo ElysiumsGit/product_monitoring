@@ -3,16 +3,44 @@ const { Timestamp } = require("firebase-admin/firestore");
 const admin = require("firebase-admin");
 const { users, activities, notifications, dateToTimeStamp } = require("../utils/utils");
 const { renderErrorPage } = require("../errors/error");
+const { sendAdminNotifications, logUserActivity, getUserNameById, getUserRoleById } = require("../utils/functions");
+// const multer = require('multer');
+// const upload = multer({ storage: multer.memoryStorage() });
 
 const db = firestore();
 
 //=============================================================== A D D  U S E R ==========================================================================
 const addUser = async (req, res) => {
     try {
-        
         const { currentUserId } = req.params;
 
+        // const blob = bucket.file(`avatar/${Date.now()}_${req.file.originalname}`);
+        // const blobStream = blob.createWriteStream({
+        //     metadata: {
+        //         contentType: req.file.mimetype,
+        //         metadata: {
+        //             firebaseStorageDownloadTokens: uuidv4(),
+        //         }
+        //     }
+        // });
+
+        // blobStream.on('error', err => {
+        //     console.error(err);
+        //     return res.status(500).send('Upload error');
+        // });
+
+        // // Wait for the upload to finish
+        // await new Promise((resolve, reject) => {
+        //     blobStream.on('finish', resolve);
+        //     blobStream.on('error', reject);
+        //     blobStream.end(req.file.buffer);
+        // });
+
+        // Get the public URL of the uploaded profile picture
+        // const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(blob.name)}?alt=media&token=${blob.metadata.metadata.firebaseStorageDownloadTokens}`;
+
         const {
+            avatar,
             first_name, 
             last_name, 
             birth_date, 
@@ -30,6 +58,7 @@ const addUser = async (req, res) => {
             hired_date,
             collectionName,
             team,
+            status,
             ...otherData
         } = req.body;
 
@@ -48,8 +77,7 @@ const addUser = async (req, res) => {
         const hiredDateTimestamp = dateToTimeStamp(hired_date);
         const birthDateTimestamp = dateToTimeStamp(birth_date);
 
-        const userRef = db.collection(users).doc();
-
+        // Check if the email already exists
         let emailExists = false;
         try {
             await admin.auth().getUserByEmail(email);
@@ -60,23 +88,25 @@ const addUser = async (req, res) => {
                 return res.status(500).json({ success: false, message: error.message });
             }
         }
-        let getUID;
 
         if (emailExists) {
             return res.status(400).json({ success: false, message: "Email already exists." });
         }
-        else{
-            getUID = await admin.auth().createUser({
-                email,
-                password,
-            });
-        }
-        
+
+        // Create the new user
+        const getUID = await admin.auth().createUser({
+            email,
+            password,
+        });
+
         const getUserUID = getUID.uid;
-        const getUserId = userRef.id;
+        const userRef = db.collection('users').doc(); 
+        const userId = userRef.id;
 
         const userData = {
-            id: getUserId,
+            // avatar: publicUrl,
+            avatar: "",
+            id: userId,
             uid: getUserUID,
             first_name, 
             last_name, 
@@ -90,6 +120,7 @@ const addUser = async (req, res) => {
             zip_code,
             role, 
             team: "",
+            status: "",
             hired_date: hiredDateTimestamp,
             ...otherData,
             created_at: Timestamp.now(),
@@ -97,46 +128,20 @@ const addUser = async (req, res) => {
 
         await userRef.set(userData);
 
-        const activityRef = db.collection(users).doc(currentUserId).collection(activities).doc();
+        const roleCurrentUser = await getUserRoleById(currentUserId); 
+        const currentUserName = await getUserNameById(currentUserId);
+        
 
-        const activityData = {
-            title: `You have successfully added ${first_name} with a role of ${role}`,
-            created_at: Timestamp.now(),
+        if(roleCurrentUser == "agent"){
+            await sendAdminNotifications(`${currentUserName} added ${first_name} with a role of ${role}`, 'user');
         }
 
-        await activityRef.set(activityData);
-
-        const adminUsersSnapshot = await db
-            .collection(users)
-            .where("role", "==", "admin")
-            .get();
-
-        const notificationPromises = [];
-
-        adminUsersSnapshot.forEach((adminDoc) => {
-            const adminId = adminDoc.id;
-
-            const notificationRef = db
-                .collection(users)
-                .doc(adminId)
-                .collection(notifications)
-                .doc();
-
-            const notificationData = {
-                id: notificationRef.id,
-                message: `${first_name} has been added to users with a role of ${role}`,
-                created_at: Timestamp.now(),
-                isRead: false,
-                type: "users",
-            };
-
-            notificationPromises.push(notificationRef.set(notificationData));
-        });
+        await logUserActivity(currentUserId, `You added ${first_name} with a role of ${role}`);
 
         return res.status(200).json({
             success: true,
             message: "User added successfully",
-            userData
+            userData,
         });
 
     } catch (error) {
@@ -148,6 +153,7 @@ const addUser = async (req, res) => {
         });
     }
 };
+
 
 //=============================================================== U P D A T E  U S E R =========================================================================
 
@@ -178,7 +184,7 @@ const updateMyProfile = async(req, res) => {
         const birthDateTimestamp = dateToTimeStamp(birth_date);
 
         const updatedData = {
-            updatedAt: Timestamp.now(),
+            updated_at: Timestamp.now(),
             ...otherData,
         };
 
@@ -203,18 +209,17 @@ const updateMyProfile = async(req, res) => {
         }
 
         await userRef.update(updatedData);
-
-        const activityRef = db.collection(users).doc(currentUserId).collection(activities).doc();
-
-        const activityData = {
-            title: `You have been updated your data`,
-            created_at: Timestamp.now(),
-        }
+        await logUserActivity(currentUserId, `You updated your data`);
 
         await activityRef.set(activityData);
         return res.status(200).json({ success: true, message: "User updated successfully." });
     } catch (error) {
-        
+        console.error("Error updating password:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error.",
+            error: error.message,
+        });
     }
 }
 
@@ -238,7 +243,6 @@ const updatePassword = async (req, res) => {
             });
         }
 
-        // Get the user document
         const userRef = db.collection('users').doc(currentUserId);
         const userSnap = await userRef.get();
 
@@ -258,17 +262,11 @@ const updatePassword = async (req, res) => {
             });
         }
 
-        // Update Firebase Auth password
         await admin.auth().updateUser(uid, {
             password: new_password,
         });
 
-        // Log activity
-        const activityRef = userRef.collection('activities').doc();
-        await activityRef.set({
-            title: "You have successfully changed your password.",
-            created_at: Timestamp.now(),
-        });
+        await logUserActivity(currentUserId, `You have successfully change your password`)
 
         return res.status(200).json({
             success: true,
@@ -285,64 +283,64 @@ const updatePassword = async (req, res) => {
 };
 
 //=============================================================== G E T =========================================================================
-const getAllUsers = async (req, res) => {
-    try {
-        const userRef = db.collection(users); 
-        const userSnapshot = await userRef.get();
+// const getAllUsers = async (req, res) => {
+//     try {
+//         const userRef = db.collection(users); 
+//         const userSnapshot = await userRef.get();
         
-        if (userSnapshot.empty) {
-            return res.status(200).json({
-                success: true,
-                message: "No data found.",
-                data: [],
-            });
-        }
+//         if (userSnapshot.empty) {
+//             return res.status(200).json({
+//                 success: true,
+//                 message: "No data found.",
+//                 data: [],
+//             });
+//         }
 
-        const data = [];
-        userSnapshot.forEach(doc => {
-            data.push({ ...doc.data() });
-        });
+//         const data = [];
+//         userSnapshot.forEach(doc => {
+//             data.push({ ...doc.data() });
+//         });
 
-        res.status(200).json({ success: true, data });
-    } catch (error) {
-        console.error("Error fetching users:", error);
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error.",
-            error: error.message,
-        });
-    }
-};
+//         res.status(200).json({ success: true, data });
+//     } catch (error) {
+//         console.error("Error fetching users:", error);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Internal server error.",
+//             error: error.message,
+//         });
+//     }
+// };
 
-const getUser = async (req, res) => {
-    try {
-        const { id } = req.params;
+// const getUser = async (req, res) => {
+//     try {
+//         const { id } = req.params;
 
-        const userRef = db.collection(users).doc(id);
-        const doc = await userRef.get(); 
+//         const userRef = db.collection(users).doc(id);
+//         const doc = await userRef.get(); 
 
-        if (!doc.exists) {
-            return res
-            .status(403)
-            .send(renderErrorPage(
-                "404 – Page Not Found",
-                "The page you’re looking for doesn’t exist.",
-                "Please check the URL for any mistakes."
-            ));
-        }
+//         if (!doc.exists) {
+//             return res
+//             .status(403)
+//             .send(renderErrorPage(
+//                 "404 – Page Not Found",
+//                 "The page you’re looking for doesn’t exist.",
+//                 "Please check the URL for any mistakes."
+//             ));
+//         }
 
-        const userData = doc.data();
+//         const userData = doc.data();
 
-        return res.status(200).json({ success: true, data: userData });
-    } catch (error) {
-        console.error("Error fetching user:", error);
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error.",
-            error: error.message,
-        });
-    }
-};
+//         return res.status(200).json({ success: true, data: userData });
+//     } catch (error) {
+//         console.error("Error fetching user:", error);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Internal server error.",
+//             error: error.message,
+//         });
+//     }
+// };
 
 //=============================================================== L O G I N =========================================================================
 const loginUser = async (req, res) => {
@@ -370,6 +368,10 @@ const loginUser = async (req, res) => {
         const userData = userDoc.data();
 
         if (userData.isDeleted === true) {
+            return res.status(404).json({ success: false, message: "User not found." });
+        }
+
+        if (userData.status === "inactive") {
             return res.status(404).json({ success: false, message: "User not found." });
         }
 
@@ -454,4 +456,4 @@ const loginUser = async (req, res) => {
 //     }
 // }
 
-module.exports = { addUser, updateMyProfile, updatePassword, getAllUsers, getUser, loginUser };
+module.exports = { addUser, updateMyProfile, updatePassword, loginUser };

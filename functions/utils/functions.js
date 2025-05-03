@@ -1,0 +1,101 @@
+const { firestore } = require("firebase-admin");
+const { Timestamp } = require("firebase-admin/firestore");
+
+const db = firestore();
+
+const sendAdminNotifications = async (message, type) => {
+    const adminUsersSnapshot = await db.collection("users").where("role", "==", "admin").get();
+    const notificationPromises = [];
+
+    adminUsersSnapshot.forEach((adminDoc) => {
+        const adminId = adminDoc.id;
+        const notificationRef = db.collection("users").doc(adminId).collection("notifications").doc();
+
+        const notificationData = {
+            id: notificationRef.id,
+            message,
+            created_at: Timestamp.now(),
+            isRead: false,
+            type,
+        };
+
+        notificationPromises.push(notificationRef.set(notificationData));
+    });
+
+    await Promise.all(notificationPromises);
+};
+
+const logUserActivity = async (currentUserId, title) => {
+    const activityRef = db.collection("users").doc(currentUserId).collection("activities").doc();
+    const activityData = {
+        title,
+        created_at: Timestamp.now(),
+    };
+    await activityRef.set(activityData);
+};
+
+const getUserNameById = async (userId) => {
+    const userDoc = await db.collection("users").doc(userId).get();
+
+    if (!userDoc.exists) {
+        throw new Error("User not found");
+    }
+
+    const userData = userDoc.data();
+    return userData.first_name || "Unknown User";
+};
+
+const getUserRoleById = async (userId) => {
+    const userDoc = await db.collection("users").doc(userId).get();
+
+    if (!userDoc.exists) {
+        throw new Error("User not found");
+    }
+
+    const userData = userDoc.data();
+    return userData.role || "Unknown Role";
+};
+
+
+const notifyTeamMembers = async (userId, message, type = "team") => {
+    const userDoc = await db.collection('users').doc(userId).get();
+
+    if (!userDoc.exists) {
+        throw new Error("User not found");
+    }
+
+    const userData = userDoc.data();
+    const teamId = userData.team;
+
+    if (!teamId) {
+        throw new Error("User is not assigned to a team");
+    }
+
+    const teamSnapshot = await db.collection('users').where("team", "==", teamId).get();
+    const notificationPromises = [];
+
+    teamSnapshot.forEach((memberDoc) => {
+        const memberId = memberDoc.id;
+
+        const notificationRef = db.collection('users').doc(memberId).collection('notifications').doc();
+        const notificationData = {
+            id: notificationRef.id,
+            message,
+            created_at: Timestamp.now(),
+            isRead: false,
+            type,
+        };
+
+        notificationPromises.push(notificationRef.set(notificationData));
+    });
+
+    await Promise.all(notificationPromises);
+};
+
+module.exports = { 
+    sendAdminNotifications, 
+    logUserActivity, 
+    getUserNameById, 
+    getUserRoleById, 
+    notifyTeamMembers 
+}

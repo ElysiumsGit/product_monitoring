@@ -128,7 +128,7 @@ const updateStore = async(req, res) => {
             product,
             display_name,
             ...other_data,
-            updatedAt: Timestamp.now(),
+            updated_at: Timestamp.now(),
         };
 
         Object.keys(allowedFields).forEach(key => {
