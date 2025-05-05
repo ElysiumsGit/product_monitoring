@@ -1,31 +1,50 @@
 const { firestore } = require("firebase-admin");
 const { Timestamp } = require("firebase-admin/firestore");
-const collection = require("../utils/utils")
+const collection = require("../utils/utils");
+const { sendAdminNotifications, getUserNameById, logUserActivity, getUserRoleById, getStoreNameById } = require("../utils/functions");
 
 const db = firestore();
 
 const addStore = async (req, res) => {
     try {
-        const { userId } = req.params;
+        const { currentUserId } = req.params;
 
         const {
             store_profile,
             store_name,
             location,
             radius,
-            name,
-            phone_number,
+            contact_name,
+            contact_number,
             display_information,
             ...other_data
         } = req.body;
 
-        if (!store_name || !location || !name || !phone_number || !Array.isArray(display_information) || display_information.length === 0 || display_information.some(di => !di.product || !di.display_name)) 
-        {
+        if (
+            !store_name || !location || !contact_name || !contact_number ||
+            !Array.isArray(display_information) || display_information.length === 0 ||
+            display_information.some(display => !display.product || !display.display_name)
+        ) {
             return res.status(400).json({ success: false, message: "All fields are required." });
+        }
+
+        const productChecks = await Promise.all(
+            display_information.map(async (display) => {
+                const productRef = db.collection('products').doc(display.product);
+                const productDoc = await productRef.get();
+                return productDoc.exists;
+            })
+        );
+
+        const allProductsValid = productChecks.every(exists => exists);
+        if (!allProductsValid) {
+            return res.status(400).json({ success: false, message: "One or more product IDs are invalid." });
         }
 
         const storeRef = db.collection(collection.collections.storesCollection).doc();
         const storeId = storeRef.id;
+        const currentUserName = await getUserNameById(currentUserId);
+        const getRole = await getUserRoleById(currentUserId);
 
         const storeData = {
             store_profile,
@@ -33,52 +52,19 @@ const addStore = async (req, res) => {
             store_name,
             location,
             radius,
-            name,
-            phone_number,
+            contact_name,
+            contact_number,
             display_information,
             ...other_data,
             created_at: Timestamp.now(),
         };
 
-        await storeRef.set(storeData);
-
-        const adminUsersSnapshot = await db
-            .collection(collection.collections.usersCollections)
-            .where("role", "==", "admin")
-            .get();
-
-        const notificationPromises = [];
-
-        adminUsersSnapshot.forEach((adminDoc) => {
-            const adminId = adminDoc.id;
-
-            const notificationRef = db
-                .collection(collection.collections.usersCollections)
-                .doc(adminId)
-                .collection(collection.subCollections.notifications)
-                .doc();
-
-            const notificationData = {
-                id: notificationRef.id,
-                message: `${store_name} store has been created and is ready for team assignment`,
-                created_at: Timestamp.now(),
-                isRead: false,
-                type: "store",
-            };
-
-            notificationPromises.push(notificationRef.set(notificationData));
-        });
-
-        await Promise.all(notificationPromises);
-
-        const activityRef = db.collection(collection.collections.usersCollections).doc(userId).collection(collection.subCollections.activities).doc();
-
-        const activityData = {
-            title: `You added ${store_name}`,
-            created_at: Timestamp.now(),
+        if (getRole === "agent") {
+            await sendAdminNotifications(`${currentUserName} has added a store named ${store_name}`, 'store');
         }
 
-        await activityRef.set(activityData);
+        await storeRef.set(storeData);
+        await logUserActivity(currentUserId, `You have added a store named ${store_name}`);
 
         return res.status(200).json({
             success: true,
@@ -96,22 +82,45 @@ const addStore = async (req, res) => {
     }
 };
 
+
 //=============================================================== U P D A T E   S T O R E =========================================================================
 
 const updateStore = async(req, res) => {
     try {
-        const { id } = req.params;
+        const { storeId, currentUserId } = req.params;
         const {
+            store_profile,
             store_name,
             location,
-            name,
-            phone_number,
-            product,
-            display_name,
+            radius,
+            contact_name,
+            contact_number,
+            display_information,
             ...other_data
         } = req.body;
 
-        const storeRef = db.collection(collection.collections.storesCollection).doc(id);
+        if (
+            !store_name || !location || !contact_name || !contact_number ||
+            !Array.isArray(display_information) || display_information.length === 0 ||
+            display_information.some(display => !display.product || !display.display_name)
+        ) {
+            return res.status(400).json({ success: false, message: "All fields are required." });
+        }
+
+        const productChecks = await Promise.all(
+            display_information.map(async (display) => {
+                const productRef = db.collection('products').doc(display.product);
+                const productDoc = await productRef.get();
+                return productDoc.exists;
+            })
+        );
+
+        const allProductsValid = productChecks.every(exists => exists);
+        if (!allProductsValid) {
+            return res.status(400).json({ success: false, message: "One or more product IDs are invalid." });
+        }
+
+        const storeRef = db.collection('stores').doc(storeId);
         const storeDoc = await storeRef.get();
 
         if(!storeDoc.exists){
@@ -121,12 +130,13 @@ const updateStore = async(req, res) => {
         let updatedStore = {}
 
         const allowedFields = { 
+            store_profile,
             store_name,
             location,
-            name,
-            phone_number,
-            product,
-            display_name,
+            radius,
+            contact_name,
+            contact_number,
+            display_information,
             ...other_data,
             updated_at: Timestamp.now(),
         };
@@ -137,61 +147,58 @@ const updateStore = async(req, res) => {
             }
         });
 
+        const getRole = await getUserRoleById(currentUserId);
+        const currentUserName = await getUserNameById(currentUserId);
+
         await storeRef.update(updatedStore);
+        if(getRole === "agent"){
+            await sendAdminNotifications(`${currentUserName} has updated a store named ${store_name}`, 'store');
+        }
+
+        await logUserActivity(currentUserId, `You have updated a store named ${store_name}`)
+
         return res.status(200).json({success: true, message: "Store Updated Success"})
 
     } catch (error) {
         console.error("Store updating error", error);
         return res.status(500).json({success: false, message: "Failed to update"});
-        
     }
 }
+
+//=============================================================== D E L E T E   S T O R E =========================================================================
 
 const deleteStore = async(req, res) => {
     try {
-        const { id } = req.params;
+        const { storeId, currentUserId } = req.params;
         
-        const storeRef = db.collection(collection.collections.storesCollection).doc(id);
-        await storeRef.delete();
+        const storeRef = db.collection("stores").doc(storeId);
+        const storeDoc = await storeRef.get();
 
-        const adminUsersSnapshot = await db
-            .collection(collection.collections.usersCollections)
-            .where("role", "==", "admin")
-            .get();
+        if (!storeDoc.exists) {
+            return res.status(404).json({ success: false, message: "Store not found." });
+        }
 
-        const notificationPromises = [];
+        const currentUserName = await getUserNameById(currentUserId);
+        const getRole = await getUserRoleById(currentUserId);
+        const getStoreName = await getStoreNameById(storeId);
 
-        adminUsersSnapshot.forEach((adminDoc) => {
-            const adminId = adminDoc.id;
+        if(getRole === 'agent'){
+            await sendAdminNotifications(`${currentUserName} has deleted a store named ${getStoreName}`, 'store');
+        }
 
-            const notificationRef = db
-                .collection(collection.collections.usersCollections)
-                .doc(adminId)
-                .collection(collection.subCollections.notifications)
-                .doc();
+        await logUserActivity(currentUserId, `You have delete a store named ${getStoreName}`);
 
-            const notificationData = {
-                id: notificationRef.id,
-                message: `${store_name} store has been created and is ready for team assignment`,
-                created_at: Timestamp.now(),
-                isRead: false,
-                type: "store",
-            };
-
-            notificationPromises.push(notificationRef.set(notificationData));
+        await storeRef.update({
+            is_deleted: true,
+            delete_at: Timestamp.now(),
         });
-
-        await Promise.all(notificationPromises);
 
         return res.status(200).json({success: true, message: "Store successfully deleted"});
+
     } catch (error) {
-        console.error("Error adding store:", error);
-        return res.status(500).json({
-            success: false,
-            message: "Failed to add store",
-            error: error.message,
-        });
+        console.error("Error deleting stores", error);
+        return res.status(500).json({ success: false, message: "Failed to delete" });
     }
 }
 
-module.exports = { addStore, deleteStore, updateStore };
+module.exports = { addStore, updateStore, deleteStore };

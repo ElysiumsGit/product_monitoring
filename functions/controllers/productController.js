@@ -1,7 +1,7 @@
 const { firestore } = require("firebase-admin");
 const { Timestamp } = require("firebase-admin/firestore");
 const { products, users, notifications, activities } = require("../utils/utils");
-const { sendAdminNotifications, getUserNameById, logUserActivity } = require("../utils/functions");
+const { sendAdminNotifications, getUserNameById, logUserActivity, getUserRoleById, getProductNameById } = require("../utils/functions");
 
 const db = firestore();
 
@@ -28,6 +28,7 @@ const addProduct = async(req, res) => {
         const productRef = db.collection(products).doc();
         const productId = productRef.id;
         const currentUserName = await getUserNameById(currentUserId);
+        const getRole = await getUserRoleById(currentUserId);
 
         const userProduct = {
             id: productId,
@@ -41,8 +42,10 @@ const addProduct = async(req, res) => {
             created_at: Timestamp.now(),
         };
 
+        if(getRole === "agent"){
+            await sendAdminNotifications(`${currentUserName} has added a product named ${product_name}`, `product`);
+        }
         await productRef.set(userProduct);
-        await sendAdminNotifications(`${currentUserName} has added a product named ${product_name}`, `product`);
         await logUserActivity(currentUserId, `You have added a product named ${product_name}`);
 
         return res.status(200).json({
@@ -139,6 +142,7 @@ const updateProduct = async(req, res) => {
         }
 
         const currentUserName = await getUserNameById(currentUserId);
+        const getRole = await getUserRoleById(currentUserId);
         let updatedProduct = {}
 
         const allowedFields = { 
@@ -159,10 +163,11 @@ const updateProduct = async(req, res) => {
         });
 
         await productRef.update(updatedProduct);
-        await sendAdminNotifications(`${currentUserName} updated a product named ${product_name}`, `product`);
-        await Promise.all(notificationPromises);
-        await logUserActivity(currentUserId, `You added a product named ${product_name}`);
 
+        if(getRole === "agent"){
+            await sendAdminNotifications(`${currentUserName} updated a product named ${product_name}`, `product`);
+        }
+        await logUserActivity(currentUserId, `You hpdate a product named ${product_name}`);
         return res.status(200).json({success: true, message: "Product Updated Success"})
 
     } catch (error) {
@@ -173,31 +178,38 @@ const updateProduct = async(req, res) => {
 }
 
 //=============================================================== D E L E T E  P R O D U C T =========================================================================
-const deleteProduct = async(req, res) => {
+const deleteProduct = async (req, res) => {
     try {
         const { productId, currentUserId } = req.params;
 
-        if(!productId){
-            return res.status(404).json({ success: false, message: "ID not Found." });
+        const productRef = db.collection("products").doc(productId);
+        const productDoc = await productRef.get();
+
+        if (!productDoc.exists) {
+            return res.status(404).json({ success: false, message: "Product not found." });
         }
 
-        const productRef = db.collection(products).doc(productId);
         const currentUserName = await getUserNameById(currentUserId);
+        const getRole = await getUserRoleById(currentUserId);
+        const getProductName = await getProductNameById(productId);
 
-        await sendAdminNotifications(`${currentUserName} deleted a product`);
-        await logUserActivity(currentUserId, `You have deleted a product`);
+        if (getRole === "agent") {
+            await sendAdminNotifications(`${currentUserName} deleted a product named ${getProductName}`, "product");
+        }
+
+        await logUserActivity(currentUserId, `You have deleted a product named ${getProductName}`);
+
         await productRef.update({
-            isDeleted: true,
+            is_deleted: true,
             deleted_at: Timestamp.now(),
         });
 
-        return res.status(200).json({success: true, message: "Deleted Product Success"})
+        return res.status(200).json({ success: true, message: "Deleted Product Success" });
 
     } catch (error) {
         console.error("Error deleting product", error);
-        return res.status(500).json({success: false, message: "Failed to delete"});
-        
+        return res.status(500).json({ success: false, message: "Failed to delete" });
     }
-}
+};
 
 module.exports = { addProduct, updateProduct, deleteProduct };

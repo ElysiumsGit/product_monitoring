@@ -1,10 +1,10 @@
-// const express = require("express")
-// const { addStore, deleteStore, updateStore, assignStore, deleteAssign, deleteAllAssign } = require("../controllers/storeControllers");
-// const authenticateToken = require("../middleware/authenticateToken");
+const express = require("express")
+const { addStore, updateStore, deleteStore } = require("../controllers/storeControllers");
+const authenticateToken = require("../middleware/authenticateToken");
 
-// const router = express.Router();
-// router.post("/addStore/:userId",  addStore);
-// router.delete("/deleteStore/:id", deleteStore);
-// router.put("/:id", updateStore);
+const router = express.Router();
+router.post("/addStore/:currentUserId",  addStore);
+router.put("/updateStore/:storeId/:currentUserId", updateStore);
+router.put("/deleteStore/:storeId/:currentUserId", deleteStore);
 
-// module.exports = router;
+module.exports = router;

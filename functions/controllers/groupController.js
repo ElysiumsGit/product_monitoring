@@ -1,65 +1,95 @@
 const { firestore } = require("firebase-admin");
 const { collections } = require("../utils/utils");
 const { Timestamp } = require("firebase-admin/firestore");
+const { sendAdminNotifications, getUserNameById, getUserRoleById, logUserActivity } = require("../utils/functions");
 
 const db = firestore();
 
-const addGroup = async(req, res) => {
+const addGroup = async (req, res) => {
     try {
-        const {
-            group_name,
-            stores
-        } =  req.body;
+        const { currentUserId } = req.params;
+        const { group_name, stores } = req.body;
 
-
-        if(!group_name || !Array.isArray(stores)){
+        if (!group_name || !Array.isArray(stores) || stores.length === 0) {
             return res.status(400).json({ success: false, message: "Invalid data" });
-        }   
+        }
 
-        const storeIds = [...stores];
-        const storeCheckPromises = storeIds.map(id =>
-            db.collection(collections.storesCollection).doc(id).get()
+        const storeDocs = await Promise.all(
+            stores.map(id => db.collection('stores').doc(id).get())
         );
 
-        const storeCheckResult = await Promise.all(storeCheckPromises);
 
-        for(const doc of storeCheckResult){
-            if(!doc.exists){
-                return res.status(400).json({
-                    success: false,
-                    message: "One or more user IDs are invalid."
-                });
+        for (const doc of storeDocs) {
+            if (!doc.exists) {
+                return res.status(400).json({ success: false, message: "Invalid store ID" });
             }
         }
 
-        const regionRef = db.collection(collections.group).doc();
-        const getRegionId = regionRef.id;
+        const groupRef = db.collection('groups').doc();
+        const getGroupId = groupRef.id;
 
-        const data = {
-            group_id: getRegionId,
+        await groupRef.set({
+            id: groupRef.id,
             group_name,
             created_at: Timestamp.now(),
+        });
+
+        for(const updateStore of storeDocs){
+            const storeRef = db.collection('stores').doc(updateStore.id);
+            await storeRef.update({
+                group: group_name,
+                updated_at: Timestamp.now(),
+            })
         }
 
-        await regionRef.set(data);
+        const getUserName = await getUserNameById(currentUserId);
+        const getRole = await getUserRoleById(currentUserId);
 
-        const updateStorePromise = storeIds.map(async (id) => {
-            const storeRef = db.collection(collections.storesCollection).doc(id);
+        if(getRole === 'agent'){
+            await sendAdminNotifications(`${getUserName} has added a group named ${group_name}`, 'group');
+        }
+        await logUserActivity(currentUserId, `You added a group named ${group_name}`)
 
-            await storeRef.update({group: getRegionId, updated_at: Timestamp.now()});
-        })
+        return res.status(201).json({ success: true, message: "Group added successfully" });
 
-        await Promise.all(updateStorePromise);
-
-        return res.status(200).json({ success: true, message: `Successfully added a ${group_name}` });
     } catch (error) {
-        return res.status(500).json({ success: false, message: "Failed to add inventory" });
+        console.error("Error adding group:", error);
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
-}
+};
+
+//=============================================================== U P D A T E   G R O U P =========================================================================
+
+// const updateGroup = async(req, res) =>{
+//     try {
+//         const { groupId, currentUserId } = req.params;
+//         const { group_name, stores } = req.body;
+
+//         if (!group_name || !Array.isArray(stores)) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "All fields are required and stores must be an array of store IDs."
+//             });
+//         };
+
+//         const groupRef = db.collection('groups').doc(groupId);
+
+//         const groupStore = await db.collection('groups').where('group', "==", groupId).get()
+
+//         const getGroup = groupStore.map((doc) => {
+//             return doc.id;
+//         });
+
+
+        
+//     } catch (error) {
+        
+//     }
+// }
 
 const updateGroup = async (req, res) => {
     try {
-        const { id } = req.params;
+        const { groupId, currentUserId } = req.params;
         const { group_name, stores } = req.body;
 
         if (!group_name || !Array.isArray(stores)) {
@@ -69,26 +99,22 @@ const updateGroup = async (req, res) => {
             });
         }
 
-        const groupRef = db.collection(collections.group).doc(id);
+        const groupRef = db.collection('groups').doc(groupId);
         const groupDoc = await groupRef.get();
 
         if (!groupDoc.exists) {
             return res.status(404).json({ success: false, message: "Group not found." });
         }
 
-        const currentGroupStoresSnap = await db.collection(collections.storesCollection)
-            .where("group", "==", id)
-            .get();
-
+        const currentGroupStoresSnap = await db.collection('stores').where("group", "==", groupId).get();
         const currentStoreIds = currentGroupStoresSnap.docs.map(doc => doc.id);
         const newStoreIds = [...stores];
 
         const removedStoreIds = currentStoreIds.filter(id => !newStoreIds.includes(id));
         const addedStoreIds = newStoreIds.filter(id => !currentStoreIds.includes(id));
 
-        // Validate if all new stores exist
         const storeCheckPromises = newStoreIds.map(uid =>
-            db.collection(collections.storesCollection).doc(uid).get()
+            db.collection('stores').doc(uid).get()
         );
         const storeDocs = await Promise.all(storeCheckPromises);
 
@@ -101,19 +127,16 @@ const updateGroup = async (req, res) => {
             }
         }
 
-        // Remove group from old stores
         const removeOldStore = removedStoreIds.map(async storeId => {
-            const storeRef = db.collection(collections.storesCollection).doc(storeId);
+            const storeRef = db.collection('stores').doc(storeId);
             await storeRef.update({ group: firestore.FieldValue.delete(), updated_at: Timestamp.now() });
         });
 
-        // Assign group to new stores
         const updateNewStores = addedStoreIds.map(async storeId => {
-            const storeRef = db.collection(collections.storesCollection).doc(storeId);
-            await storeRef.update({ group: id, updated_at: Timestamp.now() });
+            const storeRef = db.collection('stores').doc(storeId);
+            await storeRef.update({ group: groupId, updated_at: Timestamp.now() });
         });
 
-        // Update group document
         await groupRef.update({
             group_name,
             updated_at: Timestamp.now(),
@@ -121,10 +144,18 @@ const updateGroup = async (req, res) => {
 
         await Promise.all([...removeOldStore, ...updateNewStores]);
 
+        const getUserName = await getUserNameById(currentUserId);
+        const getRole = await getUserRoleById(currentUserId);
+
+        if(getRole === 'agent'){
+            await sendAdminNotifications(`${getUserName} updated a group named ${group_name}`);
+        }
+        await logUserActivity(`You updated a group named ${group_name}`);
+
         return res.status(200).json({
             success: true,
             message: "Group successfully updated",
-            data: { id },
+            data: { id: groupId },
         });
 
     } catch (error) {

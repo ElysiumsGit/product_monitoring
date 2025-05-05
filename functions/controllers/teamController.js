@@ -188,7 +188,7 @@ const deleteTeam = async (req, res) => {
         const { team_name } = teamDoc.data();
 
         await teamRef.update({
-            isDeleted: true,
+            is_deleted: true,
             updated_at: Timestamp.now()
         });
 

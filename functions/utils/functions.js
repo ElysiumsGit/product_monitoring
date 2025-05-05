@@ -56,6 +56,29 @@ const getUserRoleById = async (userId) => {
     return userData.role || "Unknown Role";
 };
 
+const getStoreNameById = async (storeId) => {
+    const storeDoc = await db.collection("stores").doc(storeId).get();
+
+    if (!storeDoc.exists) {
+        throw new Error("User not found");
+    }
+
+    const storeData = storeDoc.data();
+    return storeData.store_name || "Unknown Store";
+};
+
+const getProductNameById = async (productId) => {
+    const productDoc = await db.collection("products").doc(productId).get();
+
+    if (!productDoc.exists) {
+        throw new Error("User not found");
+    }
+
+    const productData = productDoc.data();
+    return productData.product_name || "Unknown Product";
+};
+
+
 
 const notifyTeamMembers = async (userId, message, type = "team") => {
     const userDoc = await db.collection('users').doc(userId).get();
@@ -97,5 +120,7 @@ module.exports = {
     logUserActivity, 
     getUserNameById, 
     getUserRoleById, 
-    notifyTeamMembers 
+    notifyTeamMembers,
+    getStoreNameById,
+    getProductNameById
 }

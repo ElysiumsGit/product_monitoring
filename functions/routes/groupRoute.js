@@ -1,10 +1,10 @@
-// const express = require("express");
-// const { addGroup, deleteGroup, updateGroup } = require("../controllers/groupController");
+const express = require("express");
+const { addGroup, updateGroup } = require("../controllers/groupController");
 
-// const router = express.Router();
+const router = express.Router();
 
-// router.post("/", addGroup);
-// router.delete("/:id", deleteGroup);
+router.post("/addGroup/:currentUserId", addGroup);
+router.put("/updateGroup/:groupId/:currentUserId", updateGroup);
 // router.put("/:id", updateGroup);
 
-// module.exports = router;
+module.exports = router;

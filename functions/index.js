@@ -13,11 +13,12 @@ const userRoute = require("./routes/userRoute");
 const teamRoute = require("./routes/teamRoute");
 const productRoute = require("./routes/productRoute");
 const notificationRoute = require("./routes/notificationRoute");
+const storeRoute = require("./routes/storeRoute");
+const groupRoute = require("./routes/groupRoute");
 
-// const storeRoute = require("./routes/storeRoute");
+
 // const inventoryRoute = require("./routes/inventoryRoute");
 // const categoryRoute = require("./routes/categoryRoute");
-// const groupRoute = require("./routes/groupRoute");
 // const scheduleRoute = require("./routes/scheduleRoute");
 const automationRoute = require("./routes/automationRoute");
 
@@ -33,11 +34,12 @@ app.use("/userRoute", userRoute);
 app.use("/teamRoute", teamRoute);
 app.use("/productRoute", productRoute);
 app.use("/notificationRoute", notificationRoute);
+app.use("/storeRoute", storeRoute);
+app.use("/groupRoute", groupRoute);
 
-// app.use("/storeRoute", storeRoute);
+
 // app.use("/inventoryRoute", inventoryRoute);
 // app.use("/categoryRoute", categoryRoute);
-// app.use("/groupRoute", groupRoute);
 // app.use("/scheduleRoute", scheduleRoute);
 app.use("/", automationRoute);
 app.use((req, res) => {

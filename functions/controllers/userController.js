@@ -59,6 +59,8 @@ const addUser = async (req, res) => {
             collectionName,
             team,
             status,
+            is_deleted,
+            is_verified,
             ...otherData
         } = req.body;
 
@@ -120,7 +122,9 @@ const addUser = async (req, res) => {
             zip_code,
             role, 
             team: "",
-            status: "",
+            status: "active",
+            is_deleted: false,
+            is_verified: false,
             hired_date: hiredDateTimestamp,
             ...otherData,
             created_at: Timestamp.now(),
@@ -367,7 +371,7 @@ const loginUser = async (req, res) => {
         const userDoc = snapshot.docs[0];
         const userData = userDoc.data();
 
-        if (userData.isDeleted === true) {
+        if (userData.is_deleted === true) {
             return res.status(404).json({ success: false, message: "User not found." });
         }
 
