@@ -17,7 +17,7 @@ const notificationRoute = require("./routes/notificationRoute");
 const storeRoute = require("./routes/storeRoute");
 const groupRoute = require("./routes/groupRoute");
 const categoryRoute = require("./routes/categoryRoute");
-const verifyRoute = require("./routes/categoryRoute");
+const verifyRoute = require("./routes/verifyRoute");
 
 
 // const inventoryRoute = require("./routes/inventoryRoute");
