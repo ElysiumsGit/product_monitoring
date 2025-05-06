@@ -12,8 +12,5 @@ router.post("/addUser/:currentUserId", addUser);
 router.post("/login", loginUser);
 router.put("/updateMyProfile/:currentUserId" , updateMyProfile);
 router.put("/updatePassword/:currentUserId" , updatePassword);
-// router.get("/getAllUsers" ,getAllUsers);
-// router.get("/getUser/:id"  ,getUser);
-// router.get("/getUser", getUserData);
 
 module.exports = router;

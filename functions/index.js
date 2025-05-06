@@ -1,6 +1,7 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 
+
 var serviceAccount = require("./permissions.json");
 
 admin.initializeApp({
@@ -15,18 +16,18 @@ const productRoute = require("./routes/productRoute");
 const notificationRoute = require("./routes/notificationRoute");
 const storeRoute = require("./routes/storeRoute");
 const groupRoute = require("./routes/groupRoute");
+const categoryRoute = require("./routes/categoryRoute");
+const verifyRoute = require("./routes/categoryRoute");
 
 
 // const inventoryRoute = require("./routes/inventoryRoute");
-// const categoryRoute = require("./routes/categoryRoute");
 // const scheduleRoute = require("./routes/scheduleRoute");
 const automationRoute = require("./routes/automationRoute");
 
 const express = require('express');
 const app = express();
 const cors = require('cors');
-const { renderErrorPage } = require('./errors/error');
-
+const { renderErrorPage } = require('./renderHtml/error');
 app.use(cors({ origin: true }));
 app.use(express.json());
 
@@ -35,13 +36,15 @@ app.use("/teamRoute", teamRoute);
 app.use("/productRoute", productRoute);
 app.use("/notificationRoute", notificationRoute);
 app.use("/storeRoute", storeRoute);
-app.use("/groupRoute", groupRoute);
+app.use("/groupRoute", groupRoute); //TODO Grouproute not finish yet delete group
+app.use("/categoryRoute", categoryRoute);
+app.use("/verify", verifyRoute);
 
 
 // app.use("/inventoryRoute", inventoryRoute);
-// app.use("/categoryRoute", categoryRoute);
 // app.use("/scheduleRoute", scheduleRoute);
 app.use("/", automationRoute);
+
 app.use((req, res) => {
     res.send(renderErrorPage());
 });

@@ -111,8 +111,7 @@ const updateTeam = async (req, res) => {
         if (team_name !== oldTeamName) {
             await teamDocRef.update({ name: team_name });
         }
-
-
+        
         const usersSnapshot = await db.collection('users').where('team', '==', teamId).get();
         const currentUserIdsInTeam = usersSnapshot.docs.map(doc => doc.id);
         const newTeamSet = new Set(teams);

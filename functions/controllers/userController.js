@@ -2,8 +2,8 @@ const { firestore } = require("firebase-admin");
 const { Timestamp } = require("firebase-admin/firestore");
 const admin = require("firebase-admin");
 const { users, activities, notifications, dateToTimeStamp } = require("../utils/utils");
-const { renderErrorPage } = require("../errors/error");
 const { sendAdminNotifications, logUserActivity, getUserNameById, getUserRoleById } = require("../utils/functions");
+const { sendWelcomeEmail } = require("../emailer/emailer");
 // const multer = require('multer');
 // const upload = multer({ storage: multer.memoryStorage() });
 
@@ -109,7 +109,7 @@ const addUser = async (req, res) => {
             // avatar: publicUrl,
             avatar: "",
             id: userId,
-            uid: getUserUID,
+            auth_id: getUserUID,
             first_name, 
             last_name, 
             birth_date: birthDateTimestamp, 
@@ -141,11 +141,13 @@ const addUser = async (req, res) => {
         }
 
         await logUserActivity(currentUserId, `You added ${first_name} with a role of ${role}`);
+        const result = await sendWelcomeEmail(email, `${first_name} ${last_name}`, role, userId);
 
         return res.status(200).json({
             success: true,
             message: "User added successfully",
             userData,
+            result
         });
 
     } catch (error) {
@@ -358,63 +360,66 @@ const loginUser = async (req, res) => {
         const decodedToken = await admin.auth().verifyIdToken(idToken);
         const { uid, email } = decodedToken;
 
-        let snapshot = await db.collection("users").where("uid", "==", uid).get();
+        let snapshot = await db.collection("users").where("auth_id", "==", uid).get();
 
         if (snapshot.empty && email) {
             snapshot = await db.collection("users").where("email", "==", email).get();
         }
 
         if (snapshot.empty) {
-            return res.status(404).json({ success: false, message: "Email already use." });
+            return res.status(400).json({ success: false, message: "Email already used." });
         }
 
         const userDoc = snapshot.docs[0];
         const userData = userDoc.data();
 
-        if (userData.is_deleted === true) {
-            return res.status(404).json({ success: false, message: "User not found." });
-        }
-
         if (userData.status === "inactive") {
-            return res.status(404).json({ success: false, message: "User not found." });
+            return res.status(400).json({ success: false, message: "User inactive." });
         }
 
-        if(!userData.team){
+        if(userData.is_deleted === true){
+            return res.status(400).json({ success: false, message: "User not found." });
+        }
+
+        if (!userData.team || userData.team.trim() === "") {
             return res.status(200).json({
                 success: true,
                 message: "Login successful",
                 user: userData,
             });
-        }   
-        else{
-            const teamSnapshot = await db.collection("team").doc(userData.team).get();
-
-            let teamName = null;
-
-            if (teamSnapshot.exists && userData.team) {
-                const teamData = teamSnapshot.data();
-                teamName = teamData.team_name || null;
-
-                return res.status(200).json({
-                    success: true,
-                    message: "Login successful",
-                    user: {
-                        userData,
-                        team_name: teamName
-                    },
-                });
-            }
         }
+
+        const teamSnapshot = await db.collection("team").doc(userData.team).get();
+
+        if (!teamSnapshot.exists) {
+            return res.status(404).json({
+                success: false,
+                message: "Assigned team not found.",
+            });
+        }
+
+        const teamData = teamSnapshot.data();
+        const teamName = teamData.team_name || null;
+
+        return res.status(200).json({
+            success: true,
+            message: "Login successful",
+            user: {
+                ...userData,
+                team_name: teamName,
+            },
+        });
 
     } catch (error) {
         console.error("Error verifying ID token:", error);
         return res.status(401).json({
             success: false,
-            message: "Unautorized",
+            message: "Unauthorized",
             error: error.message,
         });
     }
 };
+
 
 
 // const getUserData = async (req, res) => {

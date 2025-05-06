@@ -1,10 +1,10 @@
-// const express = require("express");
-// const { addCategory, updateCategory, deleteCategory } = require("../controllers/categoryController");
+const express = require("express");
+const { addCategory, updateCategory, deleteCategory } = require("../controllers/categoryController");
 
-// const router = express.Router();
+const router = express.Router();
 
-// router.post("/", addCategory);
-// router.put("/:id", updateCategory);
-// router.delete("/:id", deleteCategory);
+router.post("/addCategory/:currentUserId", addCategory);
+router.put("/updateCategory/:categoryId/:currentUserId", updateCategory);
+router.put("/deleteCategory/:categoryId/:currentUserId", deleteCategory);
 
-// module.exports = router;
+module.exports = router;

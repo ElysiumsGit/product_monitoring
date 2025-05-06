@@ -45,6 +45,18 @@ const getUserNameById = async (userId) => {
     return userData.first_name || "Unknown User";
 };
 
+
+const getEmailById = async (userId) => {
+    const userDoc = await db.collection("users").doc(userId).get();
+
+    if (!userDoc.exists) {
+        throw new Error("User not found");
+    }
+
+    const userData = userDoc.data();
+    return userData.email || "Unknown User";
+};
+
 const getUserRoleById = async (userId) => {
     const userDoc = await db.collection("users").doc(userId).get();
 
@@ -78,6 +90,17 @@ const getProductNameById = async (productId) => {
     return productData.product_name || "Unknown Product";
 };
 
+
+const getCategoryById = async (categoryId) => {
+    const categoryDoc = await db.collection("categories").doc(categoryId).get();
+
+    if (!categoryDoc.exists) {
+        throw new Error("User not found");
+    }
+
+    const categoryData = categoryDoc.data();
+    return categoryData.category_name || "Unknown Product";
+};
 
 
 const notifyTeamMembers = async (userId, message, type = "team") => {
@@ -122,5 +145,7 @@ module.exports = {
     getUserRoleById, 
     notifyTeamMembers,
     getStoreNameById,
-    getProductNameById
+    getProductNameById,
+    getCategoryById,
+    getEmailById
 }

@@ -1,5 +1,5 @@
 const admin = require('firebase-admin');
-const { renderErrorPage } = require('../errors/error');
+const renderErrorPage = require('../renderHtml/error');
 
 const authenticateToken = async (req, res, next) => {
     const authHeader = req.headers.authorization;
