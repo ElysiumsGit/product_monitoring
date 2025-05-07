@@ -18,8 +18,6 @@ const storeRoute = require("./routes/storeRoute");
 const groupRoute = require("./routes/groupRoute");
 const categoryRoute = require("./routes/categoryRoute");
 const verifyRoute = require("./routes/verifyRoute");
-
-
 // const inventoryRoute = require("./routes/inventoryRoute");
 // const scheduleRoute = require("./routes/scheduleRoute");
 const automationRoute = require("./routes/automationRoute");
@@ -36,7 +34,7 @@ app.use("/teamRoute", teamRoute);
 app.use("/productRoute", productRoute);
 app.use("/notificationRoute", notificationRoute);
 app.use("/storeRoute", storeRoute);
-app.use("/groupRoute", groupRoute); //TODO Grouproute not finish yet delete group
+app.use("/groupRoute", groupRoute); 
 app.use("/categoryRoute", categoryRoute);
 app.use("/verify", verifyRoute);
 

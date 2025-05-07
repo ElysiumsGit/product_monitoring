@@ -1,7 +1,7 @@
 const { firestore } = require("firebase-admin");
 const { collections } = require("../utils/utils");
 const { Timestamp, FieldValue } = require("firebase-admin/firestore");
-const { sendAdminNotifications, getUserNameById, getUserRoleById, logUserActivity } = require("../utils/functions");
+const { sendAdminNotifications, getUserNameById, getUserRoleById, logUserActivity, getGroupNameById } = require("../utils/functions");
 
 const db = firestore();
 
@@ -116,9 +116,9 @@ const updateGroup = async (req, res) => {
   
 const deleteGroup = async(req, res) => {
     try {
-        const { id } = req.params
+        const { groupId, currentUserId } = req.params
 
-        const groupRef = db.collection(collections.group).doc(id);
+        const groupRef = db.collection('groups').doc(groupId);
         const groupDoc = await groupRef.get();
 
         if(!groupDoc.exists){
@@ -128,7 +128,7 @@ const deleteGroup = async(req, res) => {
             });
         }
 
-        const storeSnap = await db.collection(collections.storesCollection).where("group", "==", id).get();
+        const storeSnap = await db.collection('stores').where("group", "==", groupId).get();
         
         const storeUpdatePromises = storeSnap.docs.map(async (storeDoc) => {
             const storeRef = storeDoc.ref;
@@ -140,12 +140,24 @@ const deleteGroup = async(req, res) => {
         });
 
         await Promise.all(storeUpdatePromises);
-        await groupRef.delete();
+        await groupRef.update({
+          is_deleted: true,
+          updated_at: Timestamp.now(),
+        });
 
+        const getUserName = await getUserNameById(currentUserId);
+        const getRole = await getUserRoleById(currentUserId);
+        const groupName = await getGroupNameById(groupId);
+  
+        if (getRole === 'agent') {
+          await sendAdminNotifications(`${getUserName} has deleted the group ${groupName}`, 'group');
+        }
+  
+        await logUserActivity(currentUserId, `You have deleted a group named ${groupName}`);
         return res.status(200).json({ success: true, message: `Successfully deleted a group` });
     } catch (error) {
         return res.status(500).json({ success: false, message: "Failed to delete group", error: error.message });
     }
 }
 
-module.exports = { addGroup, deleteGroup, updateGroup }
+module.exports = { addGroup, updateGroup, deleteGroup }

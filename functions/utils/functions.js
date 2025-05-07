@@ -68,6 +68,17 @@ const getUserRoleById = async (userId) => {
     return userData.role || "Unknown Role";
 };
 
+const getGroupNameById = async (groupId) => {
+    const groupDoc = await db.collection("groups").doc(groupId).get();
+
+    if (!groupDoc.exists) {
+        throw new Error("User not found");
+    }
+
+    const groupData = groupDoc.data();
+    return groupData.group_name || "Unknown Role";
+};
+
 const getStoreNameById = async (storeId) => {
     const storeDoc = await db.collection("stores").doc(storeId).get();
 
@@ -147,5 +158,6 @@ module.exports = {
     getStoreNameById,
     getProductNameById,
     getCategoryById,
-    getEmailById
+    getEmailById,
+    getGroupNameById
 }
