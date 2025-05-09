@@ -147,4 +147,62 @@ const successVerify = async(to, name) => {
     return transporter.sendMail(mailOptions);
 }
 
-module.exports = { sendWelcomeEmail, successVerify };
+const sendVerificationCode = async(to, code) => {
+  const mailOptions = {
+    from: `"Praetorian" <info@praetorianintel.com>`,
+    to,
+    subject: 'Verification Code',
+    html: `
+    <html>
+        <head>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              padding: 20px;
+            }
+            .container {
+              max-width: 600px;
+              margin: auto;
+              border: 1px solid #eaeaea;
+              border-radius: 6px;
+              padding: 20px;
+              background: #ffffff;
+            }
+            h2 {
+              color: #2c3e50;
+            }
+            .highlight {
+              color: #3498db;
+            }
+            ul {
+              padding-left: 20px;
+            }
+            footer {
+              margin-top: 30px;
+              font-size: 12px;
+              color: #888;
+              border-top: 1px solid #eaeaea;
+              padding-top: 10px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h2>Successfully Verify Welcome to <span class="highlight">Store Watch Application</span>, ${code}!</h2>
+            <p>Best regards,<br><strong>The Praetorian Team</strong></p>
+            <footer>
+              This is an automated email. Please do not reply directly to this message.
+            </footer>
+          </div>
+        </body>
+      </html>
+    `,
+    
+  }
+  return transporter.sendMail(mailOptions);
+
+}
+
+module.exports = { sendWelcomeEmail, successVerify, sendVerificationCode };

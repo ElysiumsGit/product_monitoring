@@ -18,6 +18,7 @@ const storeRoute = require("./routes/storeRoute");
 const groupRoute = require("./routes/groupRoute");
 const categoryRoute = require("./routes/categoryRoute");
 const verifyRoute = require("./routes/verifyRoute");
+const forgotPasswordRoute = require("./routes/forgotPasswordRoute");
 // const inventoryRoute = require("./routes/inventoryRoute");
 // const scheduleRoute = require("./routes/scheduleRoute");
 const automationRoute = require("./routes/automationRoute");
@@ -37,8 +38,7 @@ app.use("/storeRoute", storeRoute);
 app.use("/groupRoute", groupRoute); 
 app.use("/categoryRoute", categoryRoute);
 app.use("/verify", verifyRoute);
-
-
+app.use("/forgotPasswordRoute", forgotPasswordRoute);
 // app.use("/inventoryRoute", inventoryRoute);
 // app.use("/scheduleRoute", scheduleRoute);
 app.use("/", automationRoute);
