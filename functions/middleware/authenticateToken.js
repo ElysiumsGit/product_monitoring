@@ -25,7 +25,7 @@ const authenticateToken = async (req, res, next) => {
     } catch (error) {
         console.error('Error verifying token:', error.message);
         return res
-            .status(403)
+            .status(500)
             .send(renderErrorPage());
     }
 };

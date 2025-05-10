@@ -33,54 +33,117 @@ const sendWelcomeEmail = async (to, name, role, id) => {
           <style>
             body {
               font-family: Arial, sans-serif;
-              line-height: 1.6;
-              color: #333;
-              padding: 20px;
+              background-color: #f8f8f8;
+              margin: 0;
+              padding: 0;
             }
+
             .container {
               max-width: 600px;
-              margin: auto;
-              border: 1px solid #eaeaea;
-              border-radius: 6px;
-              padding: 20px;
-              background: #ffffff;
+              margin: 0 auto;
+              background-color: #ffffff;
+              padding: 32px;
+              box-shadow: 0 0 10px rgba(0,0,0,0.05);
             }
-            h2 {
-              color: #2c3e50;
+
+            .logo {
+              text-align: center;
+              margin-bottom: 20px;
             }
-            .highlight {
-              color: #3498db;
+
+            .logo img {
+              max-width: 100px;
             }
-            ul {
-              padding-left: 20px;
+
+            .title {
+              color: #E93204;
+              text-align: center;
+              font-size: 24px;
+              margin: 10px 0;
             }
-            footer {
+
+            .verifyTitle {
+              color: #333333;
+              font-size: 18px;
+              text-align: center;
               margin-top: 30px;
+              font-weight: bold;
+            }
+
+            .content {
+              margin-top: 20px;
+              font-size: 16px;
+              color: #333333;
+            }
+
+            .button-container {
+              text-align: center;
+              margin: 32px 0;
+            }
+
+            .verify-button {
+              background-color: #E93204;
+              color: white;
+              padding: 12px 32px;
+              border: none;
+              border-radius: 48px;
+              font-weight: bold;
+              font-size: 16px;
+              text-decoration: none;
+              display: inline-block;
+            }
+
+            .footer {
               font-size: 12px;
-              color: #888;
-              border-top: 1px solid #eaeaea;
-              padding-top: 10px;
+              color: #666666;
+              text-align: center;
+              margin-top: 32px;
+              border-top: 1px solid #ccc;
+              padding-top: 16px;
+            }
+            .footer p{
+                margin: 2px;
+            }
+            .endContent p{
+                margin: 3px;
+            }
+            .endContent .thanks{
+                margin-top: 32px;
             }
           </style>
         </head>
         <body>
           <div class="container">
-            <h2>Welcome to <span class="highlight">Store Watch Application</span>, ${name}!</h2>
-            <p>We're excited to have you on board. You've been added to the system with the role of <strong>${role}</strong>.</p>
-            <div class="button-container">
-              <a href="${verificationLink}" class="button">Verify Email</a>
+            <div class="logo">
+              <img src="./assets/logo.png" alt="StoreWatch Logo" />
+              <div class="title">StoreWatch</div>
             </div>
-            <p>Here’s what you can do next:</p>
-            <ul>
-              <li>Access the system using your credentials.</li>
-              <li>Explore your dashboard and assigned stores.</li>
-              <li>Reach out to your coordinator if you have questions.</li>
-            </ul>
-            <p>Best regards,<br><strong>The Praetorian Team</strong></p>
-            <footer>
-              This is an automated email. Please do not reply directly to this message.
-            </footer>
 
+            <div class="verifyTitle">Verify Your Email</div>
+
+            <div class="content">
+              <p>Hi <strong>${name}</strong>,</p>
+              <p>
+                Your account has been created in Store Watch with a role of ${role}.
+              </p>
+            </div>
+
+            <div class="button-container">
+              <a href=${verificationLink} class="verify-button">Verify Email</a>
+            </div>
+
+            <div class="endContent">
+              <p>If you didn’t expect this email, feel free to ignore it.</p>
+              <p class="thanks">Thanks,</p>
+              <p>The StoreWatch Team</p>
+            </div>
+
+            <div class="footer">
+              <p>© 2025 StoreWatch</p>
+              <p>A product of Praetorian Intelligence Incorporated</p>
+              <p>Subscribed by: Wellmade Manufacturing Corporation</p>
+              <p>All rights reserved.</p>
+            </div>
           </div>
         </body>
       </html>

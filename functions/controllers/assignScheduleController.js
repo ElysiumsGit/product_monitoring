@@ -355,4 +355,4 @@ const assignStoreSchedule = async (req, res) => {
 //   };
   
 
-module.exports = { assignStoreSchedule , getSchedulesByDate}
+module.exports = { assignStoreSchedule }
