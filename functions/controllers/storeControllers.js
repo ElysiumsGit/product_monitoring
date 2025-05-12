@@ -41,10 +41,11 @@ const addStore = async (req, res) => {
             return res.status(400).json({ success: false, message: "One or more product IDs are invalid." });
         }
 
-        const storeRef = db.collection(collection.collections.storesCollection).doc();
+        const storeRef = db.collection('stores').doc();
         const storeId = storeRef.id;
         const currentUserName = await getUserNameById(currentUserId);
         const getRole = await getUserRoleById(currentUserId);
+        const subStore = db.collection('stores').doc(storeId).collection('display_information').doc();
 
         const storeData = {
             store_profile,
@@ -54,7 +55,6 @@ const addStore = async (req, res) => {
             radius,
             contact_name,
             contact_number,
-            display_information,
             ...other_data,
             created_at: Timestamp.now(),
         };
@@ -64,6 +64,17 @@ const addStore = async (req, res) => {
         }
 
         await storeRef.set(storeData);
+
+        for(const display of display_information){
+            const storeDisplayInformationData = {
+                product: display.product,
+                display_name : display.display_name,
+                ...other_data,
+            }
+
+            await subStore.set(storeDisplayInformationData);
+        }   
+
         await logUserActivity(currentUserId, `You have added a store named ${store_name}`);
 
         return res.status(200).json({
@@ -81,7 +92,6 @@ const addStore = async (req, res) => {
         });
     }
 };
-
 
 //=============================================================== U P D A T E   S T O R E =========================================================================
 

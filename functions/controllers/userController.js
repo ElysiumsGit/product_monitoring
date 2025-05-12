@@ -38,7 +38,6 @@ const addUser = async (req, res) => {
 
         // Get the public URL of the uploaded profile picture
         // const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(blob.name)}?alt=media&token=${blob.metadata.metadata.firebaseStorageDownloadTokens}`;
-
         const {
             avatar,
             first_name, 
@@ -61,13 +60,17 @@ const addUser = async (req, res) => {
             status,
             is_deleted,
             is_verified,
+            gender,
+            street,
+            nationality,
+            push_notification, 
             ...otherData
         } = req.body;
 
         if (
             !first_name || !last_name || !birth_date || !email || !mobile_number ||
             !region || !province || !municipality || !barangay || !zip_code ||
-            !role || !password || !confirm_password
+            !role || !password || !confirm_password || gender || nationality
         ) {
             return res.status(400).json({ success: false, message: "All fields are required." });
         }
@@ -79,7 +82,6 @@ const addUser = async (req, res) => {
         const hiredDateTimestamp = dateToTimeStamp(hired_date);
         const birthDateTimestamp = dateToTimeStamp(birth_date);
 
-        // Check if the email already exists
         let emailExists = false;
         try {
             await admin.auth().getUserByEmail(email);
@@ -126,6 +128,10 @@ const addUser = async (req, res) => {
             is_deleted: false,
             is_verified: false,
             hired_date: hiredDateTimestamp,
+            gender,
+            street: "",
+            nationality,
+            push_notification: false,
             ...otherData,
             created_at: Timestamp.now(),
         };
@@ -141,7 +147,7 @@ const addUser = async (req, res) => {
         }
 
         await logUserActivity(currentUserId, `You added ${first_name} with a role of ${role}`);
-        const result = await sendWelcomeEmail(email, `${first_name} ${last_name}`, role, userId);
+        const result = await sendWelcomeEmail(email, first_name, role, userId);
 
         return res.status(200).json({
             success: true,
@@ -177,10 +183,15 @@ const updateMyProfile = async(req, res) => {
             municipality,
             barangay,
             zip_code,
+            gender,
+            nationality,
+            push_notification,
             ...otherData
         } = req.body;
 
-        const userRef = db.collection(users).doc(currentUserId);
+        
+
+        const userRef = db.collection("users").doc(currentUserId);
         const userDoc = await userRef.get();
 
         if (!userDoc.exists) {
@@ -199,12 +210,15 @@ const updateMyProfile = async(req, res) => {
             last_name,
             birth_date: birthDateTimestamp,
             mobile_number,
-            street,
             region,
             province,
             municipality,
             barangay,
             zip_code,
+            gender,
+            street,
+            nationality,
+            push_notification,
             ...otherData
         };
 
@@ -217,7 +231,6 @@ const updateMyProfile = async(req, res) => {
         await userRef.update(updatedData);
         await logUserActivity(currentUserId, `You updated your data`);
 
-        await activityRef.set(activityData);
         return res.status(200).json({ success: true, message: "User updated successfully." });
     } catch (error) {
         console.error("Error updating password:", error);
@@ -230,63 +243,63 @@ const updateMyProfile = async(req, res) => {
 }
 
 //=============================================================== U P D A T E  P A S S W O R D =========================================================================
-const updatePassword = async (req, res) => {
-    try {
-        const { currentUserId } = req.params;
-        const { new_password, confirm_new_password } = req.body;
+// const updatePassword = async (req, res) => {
+//     try {
+//         const { currentUserId } = req.params;
+//         const { new_password, confirm_new_password } = req.body;
 
-        if (!new_password || !confirm_new_password) {
-            return res.status(400).json({
-                success: false,
-                message: "All password fields are required.",
-            });
-        }
+//         if (!new_password || !confirm_new_password) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "All password fields are required.",
+//             });
+//         }
 
-        if (new_password !== confirm_new_password) {
-            return res.status(400).json({
-                success: false,
-                message: "New passwords do not match.",
-            });
-        }
+//         if (new_password !== confirm_new_password) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "New passwords do not match.",
+//             });
+//         }
 
-        const userRef = db.collection('users').doc(currentUserId);
-        const userSnap = await userRef.get();
+//         const userRef = db.collection('users').doc(currentUserId);
+//         const userSnap = await userRef.get();
 
-        if (!userSnap.exists) {
-            return res.status(404).json({
-                success: false,
-                message: "User not found.",
-            });
-        }
+//         if (!userSnap.exists) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "User not found.",
+//             });
+//         }
 
-        const { uid } = userSnap.data();
+//         const { uid } = userSnap.data();
 
-        if (!uid) {
-            return res.status(400).json({
-                success: false,
-                message: "UID not found in user document.",
-            });
-        }
+//         if (!uid) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "UID not found in user document.",
+//             });
+//         }
 
-        await admin.auth().updateUser(uid, {
-            password: new_password,
-        });
+//         await admin.auth().updateUser(uid, {
+//             password: new_password,
+//         });
 
-        await logUserActivity(currentUserId, `You have successfully change your password`)
+//         await logUserActivity(currentUserId, `You have successfully change your password`)
 
-        return res.status(200).json({
-            success: true,
-            message: "Password updated successfully.",
-        });
-    } catch (error) {
-        console.error("Error updating password:", error);
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error.",
-            error: error.message,
-        });
-    }
-};
+//         return res.status(200).json({
+//             success: true,
+//             message: "Password updated successfully.",
+//         });
+//     } catch (error) {
+//         console.error("Error updating password:", error);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Internal server error.",
+//             error: error.message,
+//         });
+//     }
+// };
 
 //=============================================================== G E T =========================================================================
 // const getAllUsers = async (req, res) => {
@@ -420,8 +433,6 @@ const loginUser = async (req, res) => {
     }
 };
 
-
-
 // const getUserData = async (req, res) => {
 //     try {
 //         res.send("Hello World");
@@ -465,4 +476,4 @@ const loginUser = async (req, res) => {
 //     }
 // }
 
-module.exports = { addUser, updateMyProfile, updatePassword, loginUser };
+module.exports = { addUser, updateMyProfile, loginUser };

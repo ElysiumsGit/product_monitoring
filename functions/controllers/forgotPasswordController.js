@@ -2,6 +2,7 @@ const { firestore } = require("firebase-admin");
 const { sendVerificationCode } = require("../emailer/emailer");
 const { FieldValue, Timestamp } = require("firebase-admin/firestore");
 const admin = require('firebase-admin');
+const { getUserNameById } = require("../utils/functions");
 
 const db = firestore();
 
@@ -20,14 +21,16 @@ const forgotPasswordController = async (req, res) => {
 
         const userRef = db.collection('users').doc(userId);
         const code = Math.floor(100000 + Math.random() * 900000);
-        const code_expires_at = Timestamp.fromDate(new Date(Date.now() + 60 * 1000)); 
+        const code_expires_at = Timestamp.fromDate(new Date(Date.now() + 3 * 60 * 1000)); 
 
         await userRef.update({ 
             code,
             code_expires_at,
         });
 
-        await sendVerificationCode(email, code);
+        const getUserName = await getUserNameById(userId);
+
+        await sendVerificationCode(email, code, getUserName);
 
         return res.status(200).json({ status: true, message: "Successfully sent a verification code" });
     } catch (error) {
@@ -77,47 +80,7 @@ const submitVerificationCode = async(req, res) => {
     }   
 }
 
-
-// const submitVerificationCode = async (req, res) => {
-    // try {
-    //     const { email, code } = req.body;
-
-    //     const getEmail = await db.collection('users').where('email', '==', email).get();
-
-    //     if (getEmail.empty) {
-    //         return res.status(400).json({ status: false, message: "Email does not exist" });
-    //     }
-
-    //     const userDoc = getEmail.docs[0];
-    //     const userData = userDoc.data();
-    //     const userId = userData.id;
-
-    //     const storedCode = userData.code;
-    //     const codeExpiresAt = userData.code_expires_at?.toDate?.() || new Date(userData.code_expires_at); 
-
-    //     if (storedCode !== code) {
-    //         return res.status(400).json({ status: false, message: "Wrong verification code" });
-    //     }
-
-    //     if (Date.now() > codeExpiresAt.getTime()) {
-    //         return res.status(400).json({ status: false, message: "Verification code expired" });
-    //     }
-
-    //     const userRef = db.collection('users').doc(userId);
-    //     await userRef.update({
-    //         code: FieldValue.delete(),
-    //         code_expires_at: FieldValue.delete(),
-    //     })
-
-    //     return res.status(200).json({ status: true, message: "Verification successful" });
-
-    // } catch (error) {
-    //     console.error(error);
-    //     return res.status(500).json({ status: false, message: "Server error during verification" });
-    // }
-// };
-
-//=============================================================== C R E A T E   N E W P A S S========================================================================
+//=============================================================== C R E A T E   N E W P A S S ========================================================================
 
 const createNewPassword = async(req, res) => {
     try {
@@ -145,7 +108,7 @@ const createNewPassword = async(req, res) => {
             password: new_password,
         });
 
-        return res.status(400).json({ status: false, message: "Successfully change the password" });
+        return res.status(400).json({ status: true, message: "Successfully change the password" });
     } catch (error) {
         return res.status(500).json({ status: false, message: "Server error not change password" });
     }

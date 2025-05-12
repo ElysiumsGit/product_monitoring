@@ -24,125 +24,98 @@ const sendWelcomeEmail = async (to, name, role, id) => {
   const verificationLink = `https://app-m4gsgw27rq-uc.a.run.app/verify?token=${verificationToken}`;
 
   const mailOptions = {
-    from: `"Praetorian" <info@praetorianintel.com>`,
+    from: `"StoreWatch" <info@praetorianintel.com>`,
     to,
-    subject: 'Welcome to Store Watch',
+    subject: 'Verify Your Email - StoreWatch',
     html: `
       <html>
         <head>
           <style>
             body {
+              background-color: #f4f4f5;
               font-family: Arial, sans-serif;
-              background-color: #f8f8f8;
+              padding: 40px 0;
               margin: 0;
-              padding: 0;
+              color: #333;
             }
-
             .container {
               max-width: 600px;
               margin: 0 auto;
-              background-color: #ffffff;
+              background: #ffffff;
+              border-radius: 6px;
               padding: 32px;
               box-shadow: 0 0 10px rgba(0,0,0,0.05);
+              border: 1px solid #eaeaea;
             }
-
             .logo {
-              text-align: center;
               margin-bottom: 20px;
+              text-align: center;
             }
-
             .logo img {
-              max-width: 100px;
+              width: 200px;
+              height: 50px;
             }
-
-            .title {
+            h1 {
               color: #E93204;
-              text-align: center;
               font-size: 24px;
-              margin: 10px 0;
+              margin-bottom: 10px;
+              text-align: center;
             }
-
-            .verifyTitle {
-              color: #333333;
+            h2 {
               font-size: 18px;
+              margin-bottom: 20px;
+              color: #333;
               text-align: center;
-              margin-top: 30px;
-              font-weight: bold;
             }
-
-            .content {
-              margin-top: 20px;
-              font-size: 16px;
-              color: #333333;
+            p {
+              font-size: 14px;
+              line-height: 1.6;
+              color: #333;
             }
-
-            .button-container {
-              text-align: center;
-              margin: 32px 0;
-            }
-
-            .verify-button {
-              background-color: #E93204;
-              color: white;
-              padding: 12px 32px;
-              border: none;
-              border-radius: 48px;
-              font-weight: bold;
-              font-size: 16px;
-              text-decoration: none;
-              display: inline-block;
-            }
-
             .footer {
-              font-size: 12px;
-              color: #666666;
+              font-size: 11px;
+              color: #888;
+              margin-top: 30px;
               text-align: center;
-              margin-top: 32px;
-              border-top: 1px solid #ccc;
-              padding-top: 16px;
-            }
-            .footer p{
-                margin: 2px;
-            }
-            .endContent p{
-                margin: 3px;
-            }
-            .endContent .thanks{
-                margin-top: 32px;
+              border-top: 1px solid #eee;
+              padding-top: 10px;
             }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="logo">
-              <img src="./assets/logo.png" alt="StoreWatch Logo" />
-              <div class="title">StoreWatch</div>
+              <img src="https://praetorianintel.com/public/images/pages/alt-logo.png" alt="StoreWatch Logo" />
+            </div>
+            <h1>StoreWatch</h1>
+            <h2>Verify Your Email</h2>
+            <p>Hi <strong>${name}</strong>,<br><br>
+            An account has been created for you via StoreWatch. To activate it and set up your password, please verify your email address by clicking the button below:</p>
+
+            <!-- INLINE STYLE BUTTON FOR GMAIL COMPATIBILITY -->
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${verificationLink}"
+                style="
+                  background-color: #E93204;
+                  color: #ffffff;
+                  padding: 12px 30px;
+                  border-radius: 24px;
+                  text-decoration: none;
+                  font-weight: bold;
+                  font-size: 14px;
+                  display: inline-block;
+                ">
+                Verify Email
+              </a>
             </div>
 
-            <div class="verifyTitle">Verify Your Email</div>
-
-            <div class="content">
-              <p>Hi <strong>${name}</strong>,</p>
-              <p>
-                Your account has been created in Store Watch with a role of ${role}.
-              </p>
-            </div>
-
-            <div class="button-container">
-              <a href=${verificationLink} class="verify-button">Verify Email</a>
-            </div>
-
-            <div class="endContent">
-              <p>If you didn’t expect this email, feel free to ignore it.</p>
-              <p class="thanks">Thanks,</p>
-              <p>The StoreWatch Team</p>
-            </div>
-
+            <p>If you didn’t expect this email, feel free to ignore it.</p>
+            <p>Thanks,<br>The StoreWatch Team</p>
             <div class="footer">
-              <p>© 2025 StoreWatch</p>
-              <p>A product of Praetorian Intelligence Incorporated</p>
-              <p>Subscribed by: Wellmade Manufacturing Corporation</p>
-              <p>All rights reserved.</p>
+              © 2025 StoreWatch<br>
+              A product of Praetorian Intelligence Incorporated<br>
+              Subscribed by: Wellmade Manufacturing Corporation<br>
+              All rights reserved.
             </div>
           </div>
         </body>
@@ -150,9 +123,9 @@ const sendWelcomeEmail = async (to, name, role, id) => {
     `,
   };
 
-  // Send the email
   return transporter.sendMail(mailOptions);
 };
+
 
 const successVerify = async(to, name) => {
     const mailOptions = {
@@ -164,105 +137,169 @@ const successVerify = async(to, name) => {
         <head>
           <style>
             body {
+              background-color: #f4f4f5;
               font-family: Arial, sans-serif;
-              line-height: 1.6;
+              padding: 40px 0;
+              margin: 0;
               color: #333;
-              padding: 20px;
             }
             .container {
               max-width: 600px;
-              margin: auto;
-              border: 1px solid #eaeaea;
-              border-radius: 6px;
-              padding: 20px;
+              margin: 0 auto;
               background: #ffffff;
+              border-radius: 6px;
+              padding: 32px;
+              box-shadow: 0 0 10px rgba(0,0,0,0.05);
+              border: 1px solid #eaeaea;
+            }
+            .logo {
+              margin-bottom: 20px;
+              text-align: center;
+            }
+            .logo img {
+              width: 200px;
+              height: 50px;
+            }
+            h1 {
+              color: #E93204;
+              font-size: 24px;
+              margin-bottom: 10px;
+              text-align: center;
             }
             h2 {
-              color: #2c3e50;
+              font-size: 18px;
+              margin-bottom: 20px;
+              color: #333;
+              text-align: center;
             }
-            .highlight {
-              color: #3498db;
+            p {
+              font-size: 14px;
+              line-height: 1.6;
+              color: #333;
             }
-            ul {
-              padding-left: 20px;
-            }
-            footer {
-              margin-top: 30px;
-              font-size: 12px;
+            .footer {
+              font-size: 11px;
               color: #888;
-              border-top: 1px solid #eaeaea;
+              margin-top: 30px;
+              text-align: center;
+              border-top: 1px solid #eee;
               padding-top: 10px;
             }
           </style>
         </head>
         <body>
           <div class="container">
-            <h2>Successfully Verify Welcome to <span class="highlight">Store Watch Application</span>, ${name}!</h2>
-            <p>Best regards,<br><strong>The Praetorian Team</strong></p>
-            <footer>
-              This is an automated email. Please do not reply directly to this message.
-            </footer>
-          </div>
-        </body>
-      </html>
-      `,
-    };
-    return transporter.sendMail(mailOptions);
-}
+            <div class="logo">
+              <img src="https://praetorianintel.com/public/images/pages/alt-logo.png" alt="StoreWatch Logo" />
+            </div>
+            <h1>StoreWatch</h1>
+            <h2>Your StoreWatch Account is Ready</h2>
+            <p>Hi <strong>${name}</strong>,<br><br>
+            Welcome to StoreWatch! Your account has been successfully created. You can now log in and start managing your tasks, submissions, and schedules with ease.</p>
 
-const sendVerificationCode = async(to, code) => {
-  const mailOptions = {
-    from: `"Praetorian" <info@praetorianintel.com>`,
-    to,
-    subject: 'Verification Code',
-    html: `
-    <html>
-        <head>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              line-height: 1.6;
-              color: #333;
-              padding: 20px;
-            }
-            .container {
-              max-width: 600px;
-              margin: auto;
-              border: 1px solid #eaeaea;
-              border-radius: 6px;
-              padding: 20px;
-              background: #ffffff;
-            }
-            h2 {
-              color: #2c3e50;
-            }
-            .highlight {
-              color: #3498db;
-            }
-            ul {
-              padding-left: 20px;
-            }
-            footer {
-              margin-top: 30px;
-              font-size: 12px;
-              color: #888;
-              border-top: 1px solid #eaeaea;
-              padding-top: 10px;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <h2>Successfully Verify Welcome to <span class="highlight">Store Watch Application</span>, ${code}!</h2>
-            <p>Best regards,<br><strong>The Praetorian Team</strong></p>
-            <footer>
-              This is an automated email. Please do not reply directly to this message.
-            </footer>
+            <p>If you didn’t expect this email, feel free to ignore it.</p>
+            <p>Thanks,<br>The StoreWatch Team</p>
+            <div class="footer">
+              © 2025 StoreWatch<br>
+              A product of Praetorian Intelligence Incorporated<br>
+              Subscribed by: Wellmade Manufacturing Corporation<br>
+              All rights reserved.
+            </div>
           </div>
         </body>
       </html>
     `,
-    
+    };
+    return transporter.sendMail(mailOptions);
+}
+
+const sendVerificationCode = async(to, code, name) => {
+  const mailOptions = {
+    from: `"Praetorian" <info@praetorianintel.com>`,
+    to,
+    subject: 'Reset Password',
+    html: `
+      <html>
+        <head>
+          <style>
+            body {
+              background-color: #f4f4f5;
+              font-family: Arial, sans-serif;
+              padding: 40px 0;
+              margin: 0;
+              color: #333;
+            }
+            .container {
+              max-width: 600px;
+              margin: 0 auto;
+              background: #ffffff;
+              border-radius: 6px;
+              padding: 32px;
+              box-shadow: 0 0 10px rgba(0,0,0,0.05);
+              border: 1px solid #eaeaea;
+            }
+            .logo {
+              margin-bottom: 20px;
+              text-align: center;
+            }
+            .logo img {
+              width: 200px;
+              height: 50px;
+            }
+            h1 {
+              color: #E93204;
+              font-size: 24px;
+              margin-bottom: 10px;
+              text-align: center;
+            }
+            h2 {
+              font-size: 18px;
+              margin-bottom: 20px;
+              color: #333;
+              text-align: center;
+            }
+            p {
+              font-size: 14px;
+              line-height: 1.6;
+              color: #333;
+            }
+            .footer {
+              font-size: 11px;
+              color: #888;
+              margin-top: 30px;
+              text-align: center;
+              border-top: 1px solid #eee;
+              padding-top: 10px;
+            }
+            .codes{
+              font-size: 16px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="logo">
+              <img src="https://praetorianintel.com/public/images/pages/alt-logo.png" alt="StoreWatch Logo" />
+            </div>
+            <h1>StoreWatch</h1>
+            <h2>Reset Password</h2>
+            <p>Hi <strong>${name}</strong>,<br><br>
+            We received a request to reset your StoreWatch account password. Please use the one-time password (OTP) below to proceed.</p>
+
+            <p><strong class="codes">${code}</strong>,<br>(This code is valid for the next 3 minutes.)</p>
+
+            <p>If you didn’t expect this email, feel free to ignore it.</p>
+            <p>Thanks,<br>The StoreWatch Team</p>
+            <div class="footer">
+              © 2025 StoreWatch<br>
+              A product of Praetorian Intelligence Incorporated<br>
+              Subscribed by: Wellmade Manufacturing Corporation<br>
+              All rights reserved.
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
   }
   return transporter.sendMail(mailOptions);
 
