@@ -3,8 +3,8 @@ const { addGroup, updateGroup, deleteGroup } = require("../controllers/groupCont
 
 const router = express.Router();
 
-router.post("/addGroup/:currentUserId", addGroup);
-router.put("/updateGroup/:groupId/:currentUserId", updateGroup);
-router.put("/deleteGroup/:groupId/:currentUserId", deleteGroup);
+router.post("/add/:currentUserId", addGroup);
+router.put("/update/:groupId/:currentUserId", updateGroup);
+router.put("/delete/:groupId/:currentUserId", deleteGroup);
 
 module.exports = router;

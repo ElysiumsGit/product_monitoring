@@ -38,7 +38,6 @@ const addGroup = async (req, res) => {
             const storeRef = db.collection('stores').doc(updateStore.id);
             await storeRef.update({
                 group: getGroupId,
-                updated_at: Timestamp.now(),
             })
         }
 
@@ -72,7 +71,6 @@ const updateGroup = async (req, res) => {
   
       await groupRef.update({
         group_name,
-        updated_at: Timestamp.now()
       });
   
       const existingStoresSnap = await db.collection('stores')
@@ -86,14 +84,12 @@ const updateGroup = async (req, res) => {
       for (const storeId of storesToAdd) {
         await db.collection('stores').doc(storeId).update({
           group: groupId,
-          updated_at: Timestamp.now()
         });
       }
   
       for (const storeId of storesToRemove) {
         await db.collection('stores').doc(storeId).update({
           group: FieldValue.delete(),
-          updated_at: Timestamp.now()
         });
       }
   
@@ -135,14 +131,12 @@ const deleteGroup = async(req, res) => {
 
             await storeRef.update({
                 group: firestore.FieldValue.delete(),
-                updated_at: Timestamp.now(),
             })
         });
 
         await Promise.all(storeUpdatePromises);
         await groupRef.update({
           is_deleted: true,
-          updated_at: Timestamp.now(),
         });
 
         const getUserName = await getUserNameById(currentUserId);

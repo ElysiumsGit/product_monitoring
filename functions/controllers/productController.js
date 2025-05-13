@@ -153,7 +153,6 @@ const updateProduct = async(req, res) => {
             unit, 
             quantity, 
             ...other_data,
-            updated_at: Timestamp.now(),
         };
 
         Object.keys(allowedFields).forEach(key => {

@@ -148,7 +148,6 @@ const updateStore = async(req, res) => {
             contact_number,
             display_information,
             ...other_data,
-            updated_at: Timestamp.now(),
         };
 
         Object.keys(allowedFields).forEach(key => {

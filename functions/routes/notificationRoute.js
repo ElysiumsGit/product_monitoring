@@ -3,8 +3,8 @@ const { deleteNotification, deleteAllNotifications } = require("../controllers/n
 
 const router = express.Router();
 
-router.delete("/deleteNotification/:currentUserId/:notification_id", deleteNotification);
-router.delete("/deleteAllNotification/:currentUserId", deleteAllNotifications);
+router.delete("/delete/:currentUserId/:notification_id", deleteNotification);
+router.delete("/deleteAll/:currentUserId", deleteAllNotifications);
 // router.delete("/getNotification/:currentUserId", getNotification);
 
 module.exports = router;

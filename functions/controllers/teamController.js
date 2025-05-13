@@ -36,7 +36,6 @@ const assignTeam = async(req, res) => {
             
             await userRef.update({
                 team: teamId,
-                updated_at: Timestamp.now()
             })
 
             await notificationRef.set({
@@ -188,7 +187,6 @@ const deleteTeam = async (req, res) => {
 
         await teamRef.update({
             is_deleted: true,
-            updated_at: Timestamp.now()
         });
 
         const usersSnap = await db
@@ -202,7 +200,6 @@ const deleteTeam = async (req, res) => {
 
             await userRef.update({
                 team: firestore.FieldValue.delete(),
-                updated_at: Timestamp.now()
             });
 
             await notifRef.set({

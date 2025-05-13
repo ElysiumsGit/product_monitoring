@@ -3,8 +3,8 @@ const { addStore, updateStore, deleteStore } = require("../controllers/storeCont
 const authenticateToken = require("../middleware/authenticateToken");
 
 const router = express.Router();
-router.post("/addStore/:currentUserId",  addStore);
-router.put("/updateStore/:storeId/:currentUserId", updateStore);
-router.put("/deleteStore/:storeId/:currentUserId", deleteStore);
+router.post("/add/:currentUserId",  addStore);
+router.put("/update/:storeId/:currentUserId", updateStore);
+router.put("/delete/:storeId/:currentUserId", deleteStore);
 
 module.exports = router;

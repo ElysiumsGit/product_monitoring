@@ -3,10 +3,10 @@ const { addProduct, updateProduct, deleteProduct,  } = require("../controllers/p
 
 const router = express.Router();
 
-router.post("/addProduct/:currentUserId", addProduct);
+router.post("/add/:currentUserId", addProduct);
 // router.get("/getAllProducts", getAllProducts);
 // router.get("/getSingleProduct/:productId", getSingleProduct);
-router.put("/updateProduct/:productId/:currentUserId", updateProduct);
-router.put("/deleteProduct/:productId/:currentUserId", deleteProduct);
+router.put("/update/:productId/:currentUserId", updateProduct);
+router.put("/delete/:productId/:currentUserId", deleteProduct);
 
 module.exports = router;

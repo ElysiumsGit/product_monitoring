@@ -4,7 +4,7 @@ const { forgotPasswordController, submitVerificationCode, createNewPassword } = 
 const router = express.Router();
 
 router.put("/forgotPassword", forgotPasswordController);
-router.put("/codeRoute", submitVerificationCode);
+router.put("/code", submitVerificationCode);
 router.put("/createNewPassword", createNewPassword);
 
 module.exports = router;

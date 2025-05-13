@@ -3,9 +3,9 @@ const { assignTeam, updateTeam, deleteTeam } = require("../controllers/teamContr
 
 const router = express.Router();
 
-router.post("/addTeam/:currentUserId", assignTeam);
+router.post("/add/:currentUserId", assignTeam);
 // router.get("/getTeam/:teamId", getUsersByTeam);
-router.put("/updateTeam/:teamId/:currentUserId", updateTeam);
-router.put("/deleteTeam/:teamId/:currentUserId", deleteTeam);
+router.put("/update/:teamId/:currentUserId", updateTeam);
+router.put("/delete/:teamId/:currentUserId", deleteTeam);
 
 module.exports = router;

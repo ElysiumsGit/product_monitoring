@@ -52,7 +52,6 @@ const updateStock = async (req, res) => {
         const inventoryupdated_ata = {
             unit: unit,
             quantity: quantity,
-            updated_at: Timestamp.now(),
         }
 
         await inventoryRef.update(inventoryupdated_ata)
@@ -82,7 +81,6 @@ const updateTreshold = async (req, res) => {
 
         const updatedTreshold = {
             treshold,
-            updated_at: Timestamp.now()
         }
 
         await inventoryRef.update(updatedTreshold)

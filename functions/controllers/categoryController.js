@@ -64,7 +64,6 @@ const updateCategory = async (req, res) => {
 
         await categoryRef.update({ 
             category_name,
-            updated_at: Timestamp.now(), 
         });
 
         const getUserName = await getUserNameById(currentUserId);

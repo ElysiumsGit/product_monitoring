@@ -169,7 +169,7 @@ const addUser = async (req, res) => {
 
 //=============================================================== U P D A T E  U S E R =========================================================================
 
-const updateMyProfile = async(req, res) => {
+const updateMyProfile = async (req, res) => {
     try {
         const { currentUserId } = req.params;
         const {
@@ -189,8 +189,6 @@ const updateMyProfile = async(req, res) => {
             ...otherData
         } = req.body;
 
-        
-
         const userRef = db.collection("users").doc(currentUserId);
         const userDoc = await userRef.get();
 
@@ -198,12 +196,7 @@ const updateMyProfile = async(req, res) => {
             return res.status(404).json({ success: false, message: "Need current User Id." });
         }
 
-        const birthDateTimestamp = dateToTimeStamp(birth_date);
-
-        const updatedData = {
-            updated_at: Timestamp.now(),
-            ...otherData,
-        };
+        const birthDateTimestamp = birth_date ? dateToTimeStamp(birth_date) : undefined;
 
         const updatableFields = {
             first_name,
@@ -222,25 +215,40 @@ const updateMyProfile = async(req, res) => {
             ...otherData
         };
 
+        const updatedKeys = [];
+
         for (const key in updatableFields) {
             if (updatableFields[key] !== undefined) {
-                updatedData[key] = updatableFields[key];
+                updatedKeys.push(key);
             }
         }
 
+        if (updatedKeys.length === 0) {
+            return res.status(400).json({ success: false, message: "No fields to update." });
+        }
+
         await userRef.update(updatedData);
-        await logUserActivity(currentUserId, `You updated your data`);
+
+        // Trigger activity log only if more than just `push_notification` is updated
+        const isOnlyPushNotificationUpdated =
+            updatedKeys.length === 1 && updatedKeys[0] === "push_notification";
+
+        if (!isOnlyPushNotificationUpdated) {
+            await logUserActivity(currentUserId, `You updated your data`);
+        }
 
         return res.status(200).json({ success: true, message: "User updated successfully." });
+
     } catch (error) {
-        console.error("Error updating password:", error);
+        console.error("Error updating profile:", error);
         return res.status(500).json({
             success: false,
             message: "Internal server error.",
             error: error.message,
         });
     }
-}
+};
+
 
 //=============================================================== U P D A T E  P A S S W O R D =========================================================================
 // const updatePassword = async (req, res) => {
@@ -394,7 +402,10 @@ const loginUser = async (req, res) => {
             return res.status(400).json({ success: false, message: "User not found." });
         }
 
+        const getId = userData.id;
+
         if (!userData.team || userData.team.trim() === "") {
+            await logUserActivity(getId, `You have logged in`);
             return res.status(200).json({
                 success: true,
                 message: "Login successful",
@@ -414,6 +425,19 @@ const loginUser = async (req, res) => {
         const teamData = teamSnapshot.data();
         const teamName = teamData.team_name || null;
 
+        const currentTime = Timestamp.now();
+        const dateObj = currentTime.toDate();
+
+        const formattedTime = dateObj.toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+        });
+
+        await logUserActivity(getId, `Last sign-in: ${formattedTime}`);
         return res.status(200).json({
             success: true,
             message: "Login successful",

@@ -1,7 +1,5 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
-
-
 var serviceAccount = require("./permissions.json");
 
 admin.initializeApp({
@@ -23,19 +21,15 @@ const authPassword = require("./routes/authPasswordRoute");
 // const inventoryRoute = require("./routes/inventoryRoute");
 // const scheduleRoute = require("./routes/scheduleRoute");
 const automationRoute = require("./routes/automationRoute");
-const multer = require("multer");
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
-const { v4: uuidv4 } = require('uuid');
-const bucket = admin.storage().bucket();
+const { renderErrorPage } = require('./renderHtml/error');
 
 const express = require('express');
 const app = express();
 const cors = require('cors');
-const { renderErrorPage } = require('./renderHtml/error');
+const { upload } = require('./middleware/multer');
+
 app.use(cors({ origin: true }));
 app.use(express.json());
-
 app.use("/user", userRoute);
 app.use("/team", teamRoute);
 app.use("/product", productRoute);
@@ -50,15 +44,41 @@ app.use("/auth", authPassword);
 // app.use("/scheduleRoute", scheduleRoute);
 app.use("/", automationRoute);
 
+const bucket = admin.storage().bucket();
 
-app.post("upload", upload.single('file'), (req, res) => {
+async function uploadFileToFirebase(file, folder = "uploads") {
+  const fileName = `${folder}/${uuidv4()}_${file.originalname}`;
+  const blob = bucket.file(fileName);
+
+  const blobStream = blob.createWriteStream({
+    metadata: {
+      contentType: file.mimetype,
+      metadata: {
+        firebaseStorageDownloadTokens: uuidv4(),
+      },
+    },
+  });
+
+  return new Promise((resolve, reject) => {
+    blobStream.on("error", (err) => reject(err));
+
+    blobStream.on("finish", () => {
+      const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(blob.name)}?alt=media&token=${blob.metadata.metadata.firebaseStorageDownloadTokens}`;
+      resolve(publicUrl);
+    });
+
+    blobStream.end(file.buffer);
+  });
+}
+
+app.post('/upload', upload, async (req, res) => {
     try {
-        return res.status(200).json({success: true, message: `Upladed Success ${req.file}`})
+        const url = await uploadFileToFirebase(req.file);
+        res.json({success: true, url});
     } catch (error) {
-        return res.status(599).json({success: false, message: "Error"})
+        res.status(500).json({ success: false, error: err.message });
     }
 })
-
 
 app.use((req, res) => {
     res.send(renderErrorPage());
