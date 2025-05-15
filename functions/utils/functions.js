@@ -25,9 +25,10 @@ const sendAdminNotifications = async (message, type) => {
     await Promise.all(notificationPromises);
 };
 
-const logUserActivity = async (currentUserId, activity) => {
+const logUserActivity = async ({ currentUserId, activity, heading = 'Input a heading' }) => {
     const activityRef = db.collection("users").doc(currentUserId).collection("activities").doc();
     const activityData = {
+        heading,
         activity,
         created_at: Timestamp.now(),
     };

@@ -46,7 +46,11 @@ const assignTeam = async(req, res) => {
             })
         }
 
-        await logUserActivity(currentUserId, `You have created a team with a team name of ${team_name}`);
+        await logUserActivity({ 
+            heading: "Team Assignment",
+            currentUserId: currentUserId, 
+            activity: 'You have successfully assigned a team' 
+        });
 
         return res.status(200).json({
             success: true,
@@ -159,7 +163,11 @@ const updateTeam = async (req, res) => {
             });
         }
 
-        await logUserActivity(currentUserId, `You have updated the team ${team_name}`);
+        await logUserActivity({ 
+            heading: "Team Update",
+            currentUserId: currentUserId, 
+            activity: 'You have successfully update a team' 
+        });
         return res.status(200).json({ success: true, message: "Updated Team" });
 
     } catch (error) {
@@ -213,7 +221,11 @@ const deleteTeam = async (req, res) => {
 
         await Promise.all(userUpdatePromises);
 
-        await logUserActivity(currentUserId, `You have marked the team "${team_name}" as deleted.`);
+        await logUserActivity({ 
+            heading: "Team Deletion",
+            currentUserId: currentUserId, 
+            activity: 'You have deleted a team' 
+        });
 
         return res.status(200).json({
             success: true,

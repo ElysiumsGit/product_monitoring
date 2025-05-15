@@ -146,7 +146,12 @@ const addUser = async (req, res) => {
             await sendAdminNotifications(`${currentUserName} added ${first_name} with a role of ${role}`, 'user');
         }
 
-        await logUserActivity(currentUserId, `You added ${first_name} with a role of ${role}`);
+        await logUserActivity({ 
+            heading: "Add User",
+            currentUserId: currentUserId, 
+            activity: 'You have successfully added a user' 
+        });
+
         const result = await sendWelcomeEmail(email, first_name, role, userId);
 
         return res.status(200).json({
@@ -169,7 +174,7 @@ const addUser = async (req, res) => {
 
 //=============================================================== U P D A T E  U S E R =========================================================================
 
-const updateMyProfile = async (req, res) => {
+const updateMyProfile = async(req, res) => {
     try {
         const { currentUserId } = req.params;
         const {
@@ -196,12 +201,14 @@ const updateMyProfile = async (req, res) => {
             return res.status(404).json({ success: false, message: "Need current User Id." });
         }
 
-        const birthDateTimestamp = birth_date ? dateToTimeStamp(birth_date) : undefined;
+        const updatedData = {
+            ...otherData,
+        };
 
         const updatableFields = {
             first_name,
             last_name,
-            birth_date: birthDateTimestamp,
+            birth_date: birth_date ? dateToTimeStamp(birth_date) : undefined,
             mobile_number,
             region,
             province,
@@ -215,30 +222,36 @@ const updateMyProfile = async (req, res) => {
             ...otherData
         };
 
-        const updatedKeys = [];
-
+        let hasOtherChanges = false;
         for (const key in updatableFields) {
-            if (updatableFields[key] !== undefined) {
-                updatedKeys.push(key);
+            if (updatableFields[key] !== undefined && key !== 'push_notification') {
+                if (userDoc.data()[key] !== updatableFields[key]) {
+                    hasOtherChanges = true;
+                }
+                updatedData[key] = updatableFields[key];
+            } else if (key === 'push_notification' && updatableFields[key] !== undefined) {
+                updatedData[key] = updatableFields[key];
             }
-        }
-
-        if (updatedKeys.length === 0) {
-            return res.status(400).json({ success: false, message: "No fields to update." });
         }
 
         await userRef.update(updatedData);
 
-        // Trigger activity log only if more than just `push_notification` is updated
-        const isOnlyPushNotificationUpdated =
-            updatedKeys.length === 1 && updatedKeys[0] === "push_notification";
-
-        if (!isOnlyPushNotificationUpdated) {
-            await logUserActivity(currentUserId, `You updated your data`);
+        if (hasOtherChanges) {
+            await logUserActivity({ 
+                heading: "Update User",
+                currentUserId: currentUserId, 
+                activity: 'You have successfully update a user' 
+            });
+        } else if (Object.keys(updatedData).length > 0 && Object.keys(updatedData).every(key => key === 'push_notification')) {
+        } else if (Object.keys(updatedData).length > 0) {
+            await logUserActivity({ 
+                heading: "Update User",
+                currentUserId: currentUserId, 
+                activity: 'You have successfully update a user' 
+            });
         }
 
         return res.status(200).json({ success: true, message: "User updated successfully." });
-
     } catch (error) {
         console.error("Error updating profile:", error);
         return res.status(500).json({
@@ -248,6 +261,7 @@ const updateMyProfile = async (req, res) => {
         });
     }
 };
+
 
 
 //=============================================================== U P D A T E  P A S S W O R D =========================================================================
@@ -405,7 +419,12 @@ const loginUser = async (req, res) => {
         const getId = userData.id;
 
         if (!userData.team || userData.team.trim() === "") {
-            await logUserActivity(getId, `You have logged in`);
+            await logUserActivity({ 
+                heading: "Signed In",
+                currentUserId: getId, 
+                activity: 'Account signed in successfully' 
+            });
+
             return res.status(200).json({
                 success: true,
                 message: "Login successful",
@@ -425,19 +444,25 @@ const loginUser = async (req, res) => {
         const teamData = teamSnapshot.data();
         const teamName = teamData.team_name || null;
 
-        const currentTime = Timestamp.now();
-        const dateObj = currentTime.toDate();
+        // const currentTime = Timestamp.now();
+        // const dateObj = currentTime.toDate();
 
-        const formattedTime = dateObj.toLocaleString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true,
+        // const formattedTime = dateObj.toLocaleString('en-US', {
+        //     year: 'numeric',
+        //     month: 'long',
+        //     day: 'numeric',
+        //     hour: 'numeric',
+        //     minute: '2-digit',
+        //     hour12: true,
+        // });
+
+        
+        await logUserActivity({ 
+            heading: "Signed In",
+            currentUserId: getId, 
+            activity: 'Account signed in successfully' 
         });
 
-        await logUserActivity(getId, `Last sign-in: ${formattedTime}`);
         return res.status(200).json({
             success: true,
             message: "Login successful",

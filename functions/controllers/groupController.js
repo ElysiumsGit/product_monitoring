@@ -47,7 +47,11 @@ const addGroup = async (req, res) => {
         if(getRole === 'agent'){
             await sendAdminNotifications(`${getUserName} has added a group named ${group_name}`, 'group');
         }
-        await logUserActivity(currentUserId, `You added a group named ${group_name}`)
+        await logUserActivity({ 
+            heading: "Add Group",
+            currentUserId: currentUserId, 
+            activity: 'You have successfully added a group' 
+        });
 
         return res.status(201).json({ success: true, message: "Group added successfully" });
 
@@ -100,7 +104,11 @@ const updateGroup = async (req, res) => {
         await sendAdminNotifications(`${getUserName} has updated the group ${group_name}`, 'group');
       }
   
-      await logUserActivity(currentUserId, `You have updated a group named ${group_name}`);
+      await logUserActivity({ 
+          heading: "Update Group",
+          currentUserId: currentUserId, 
+          activity: 'You have successfully updated a group' 
+      });
   
       return res.status(200).json({ success: true, message: 'Group updated successfully' });
   
@@ -147,7 +155,12 @@ const deleteGroup = async(req, res) => {
           await sendAdminNotifications(`${getUserName} has deleted the group ${groupName}`, 'group');
         }
   
-        await logUserActivity(currentUserId, `You have deleted a group named ${groupName}`);
+        await logUserActivity({ 
+            heading: "Deleted Group",
+            currentUserId: currentUserId, 
+            activity: 'You have deleted a group' 
+        });
+
         return res.status(200).json({ success: true, message: `Successfully deleted a group` });
     } catch (error) {
         return res.status(500).json({ success: false, message: "Failed to delete group", error: error.message });

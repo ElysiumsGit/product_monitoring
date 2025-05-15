@@ -46,7 +46,11 @@ const addProduct = async(req, res) => {
             await sendAdminNotifications(`${currentUserName} has added a product named ${product_name}`, `product`);
         }
         await productRef.set(userProduct);
-        await logUserActivity(currentUserId, `You have added a product named ${product_name}`);
+        await logUserActivity({ 
+            heading: "Add Product",
+            currentUserId: currentUserId, 
+            activity: 'You have successfully added a product' 
+        });
 
         return res.status(200).json({
             success: true,
@@ -125,6 +129,7 @@ const updateProduct = async(req, res) => {
     try {
         const { productId, currentUserId } = req.params;
         const{
+            product_image,
             product_name,
             sku_code,
             category,
@@ -146,6 +151,7 @@ const updateProduct = async(req, res) => {
         let updatedProduct = {}
 
         const allowedFields = { 
+            product_image,
             product_name, 
             sku_code, 
             category, 
@@ -166,7 +172,13 @@ const updateProduct = async(req, res) => {
         if(getRole === "agent"){
             await sendAdminNotifications(`${currentUserName} updated a product named ${product_name}`, `product`);
         }
-        await logUserActivity(currentUserId, `You hpdate a product named ${product_name}`);
+        
+        await logUserActivity({ 
+            heading: "Update Product",
+            currentUserId: currentUserId, 
+            activity: 'You have successfully updated a product' 
+        });
+
         return res.status(200).json({success: true, message: "Product Updated Success"})
 
     } catch (error) {
@@ -196,7 +208,11 @@ const deleteProduct = async (req, res) => {
             await sendAdminNotifications(`${currentUserName} deleted a product named ${getProductName}`, "product");
         }
 
-        await logUserActivity(currentUserId, `You have deleted a product named ${getProductName}`);
+        await logUserActivity({ 
+            heading: "Delete Product",
+            currentUserId: currentUserId, 
+            activity: 'You have deleted a product' 
+        });
 
         await productRef.update({
             is_deleted: true,

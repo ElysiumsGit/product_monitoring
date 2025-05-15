@@ -47,7 +47,11 @@ const updatePassword = async (req, res) => {
             password: new_password,
         });
 
-        await logUserActivity(currentUserId, `You have successfully change your password`)
+        await logUserActivity({ 
+            heading: "Change Password",
+            currentUserId: currentUserId, 
+            activity: 'You have change the password' 
+        });
 
         return res.status(200).json({
             success: true,

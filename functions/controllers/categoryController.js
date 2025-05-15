@@ -36,7 +36,12 @@ const addCategory = async(req, res) => {
             await sendAdminNotifications(`${getUserName} has been added a category in product named ${category_name}`, 'category');
         }
 
-        await logUserActivity(currentUserId, `You added a product category named ${category_name}`)
+        await logUserActivity({ 
+            heading: "Add Category",
+            currentUserId: currentUserId, 
+            activity: 'You have successfully added a category' 
+        });
+
         return res.status(200).json({ success: true, message: "Category Successfully Added" });
     } catch (error) {
         console.error("Error adding category", error);
@@ -72,7 +77,12 @@ const updateCategory = async (req, res) => {
         if(getRole === 'agent'){
             await sendAdminNotifications(`${getUserName} has been updated a category in product named ${category_name}`, 'category');
         }
-        await logUserActivity(currentUserId, `You updated a product category named ${category_name}`)
+        
+        await logUserActivity({ 
+            heading: "Update Group",
+            currentUserId: currentUserId, 
+            activity: 'You have successfully update a group' 
+        });
 
         return res.status(200).json({ success: true, message: "Category successfully updated" });
     } catch (error) {
@@ -107,7 +117,12 @@ const deleteCategory = async (req, res) => {
         if(getRole === 'agent'){
             await sendAdminNotifications(`${getUserName} has been deleted a category in product, named ${getCategoryName}`, 'category');
         }
-        await logUserActivity(currentUserId, `You deleted a product category named ${getCategoryName}`)
+
+        await logUserActivity({ 
+            heading: "Delete Category",
+            currentUserId: currentUserId, 
+            activity: 'You have deleted a category' 
+        });
 
         return res.status(200).json({ success: true, message: "Category successfully deleted" });
     } catch (error) {

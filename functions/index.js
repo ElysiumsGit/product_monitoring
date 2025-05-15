@@ -21,12 +21,12 @@ const authPassword = require("./routes/authPasswordRoute");
 // const inventoryRoute = require("./routes/inventoryRoute");
 // const scheduleRoute = require("./routes/scheduleRoute");
 const automationRoute = require("./routes/automationRoute");
+const multer = require('multer');
 const { renderErrorPage } = require('./renderHtml/error');
 
 const express = require('express');
 const app = express();
 const cors = require('cors');
-const { upload } = require('./middleware/multer');
 
 app.use(cors({ origin: true }));
 app.use(express.json());
@@ -45,40 +45,31 @@ app.use("/auth", authPassword);
 app.use("/", automationRoute);
 
 const bucket = admin.storage().bucket();
+const upload = multer({ storage: multer.memoryStorage() });
 
-async function uploadFileToFirebase(file, folder = "uploads") {
-  const fileName = `${folder}/${uuidv4()}_${file.originalname}`;
-  const blob = bucket.file(fileName);
+app.post('/upload', upload.single('file'), (req, res) => {
+  const file = req.file;
+  const fileName = Date.now() + '-' + file.originalname;
+  const fileUpload = bucket.file(fileName);
 
-  const blobStream = blob.createWriteStream({
-    metadata: {
-      contentType: file.mimetype,
+  const blobStream = fileUpload.createWriteStream({
       metadata: {
-        firebaseStorageDownloadTokens: uuidv4(),
-      },
-    },
+          contentType: file.mimetype
+      }
   });
 
-  return new Promise((resolve, reject) => {
-    blobStream.on("error", (err) => reject(err));
-
-    blobStream.on("finish", () => {
-      const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(blob.name)}?alt=media&token=${blob.metadata.metadata.firebaseStorageDownloadTokens}`;
-      resolve(publicUrl);
-    });
-
-    blobStream.end(file.buffer);
+  blobStream.on('error', (error) => {
+      console.error(error);
+      res.status(500).send('Error uploading file');
   });
-}
 
-app.post('/upload', upload, async (req, res) => {
-    try {
-        const url = await uploadFileToFirebase(req.file);
-        res.json({success: true, url});
-    } catch (error) {
-        res.status(500).json({ success: false, error: err.message });
-    }
-})
+  blobStream.on('finish', () => {
+      const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileUpload.name}`;
+      res.status(200).send({ message: 'File uploaded successfully', url: publicUrl });
+  });
+
+  blobStream.end(file.buffer);
+});
 
 app.use((req, res) => {
     res.send(renderErrorPage());
