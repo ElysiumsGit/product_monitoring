@@ -47,9 +47,9 @@ const assignTeam = async(req, res) => {
         }
 
         await logUserActivity({ 
-            heading: "Team Assignment",
+            heading: "team assignment",
             currentUserId: currentUserId, 
-            activity: 'You have successfully assigned a team' 
+            activity: 'you have successfully assigned a team' 
         });
 
         return res.status(200).json({
@@ -164,9 +164,9 @@ const updateTeam = async (req, res) => {
         }
 
         await logUserActivity({ 
-            heading: "Team Update",
+            heading: "team update",
             currentUserId: currentUserId, 
-            activity: 'You have successfully update a team' 
+            activity: 'you have successfully update a team' 
         });
         return res.status(200).json({ success: true, message: "Updated Team" });
 
@@ -222,9 +222,9 @@ const deleteTeam = async (req, res) => {
         await Promise.all(userUpdatePromises);
 
         await logUserActivity({ 
-            heading: "Team Deletion",
+            heading: "team deletion",
             currentUserId: currentUserId, 
-            activity: 'You have deleted a team' 
+            activity: 'you have deleted a team' 
         });
 
         return res.status(200).json({

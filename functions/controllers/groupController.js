@@ -48,9 +48,9 @@ const addGroup = async (req, res) => {
             await sendAdminNotifications(`${getUserName} has added a group named ${group_name}`, 'group');
         }
         await logUserActivity({ 
-            heading: "Add Group",
+            heading: "add group",
             currentUserId: currentUserId, 
-            activity: 'You have successfully added a group' 
+            activity: 'you have successfully added a group' 
         });
 
         return res.status(201).json({ success: true, message: "Group added successfully" });
@@ -105,9 +105,9 @@ const updateGroup = async (req, res) => {
       }
   
       await logUserActivity({ 
-          heading: "Update Group",
+          heading: "update group",
           currentUserId: currentUserId, 
-          activity: 'You have successfully updated a group' 
+          activity: 'you have successfully updated a group' 
       });
   
       return res.status(200).json({ success: true, message: 'Group updated successfully' });
@@ -156,9 +156,9 @@ const deleteGroup = async(req, res) => {
         }
   
         await logUserActivity({ 
-            heading: "Deleted Group",
+            heading: "deleted group",
             currentUserId: currentUserId, 
-            activity: 'You have deleted a group' 
+            activity: 'you have deleted a group' 
         });
 
         return res.status(200).json({ success: true, message: `Successfully deleted a group` });

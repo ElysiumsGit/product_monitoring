@@ -1,5 +1,5 @@
 const express = require("express")
-const { addUser, updateMyProfile, loginUser  } = require("../controllers/userController");
+const { addUser, updateMyProfile, loginUser, userAttendance  } = require("../controllers/userController");
 const authenticateToken = require("../middleware/authenticateToken");
 const multer = require("multer");
 const { auth } = require("firebase-admin");
@@ -13,5 +13,6 @@ router.post("/add/:currentUserId", addUser);
 router.post("/login", loginUser);
 router.put("/update/:currentUserId" , updateMyProfile);
 // router.put("/updatePassword/:currentUserId" , updatePassword);
+router.post('/attendance/:currentUserId', userAttendance);
 
 module.exports = router;

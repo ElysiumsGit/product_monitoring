@@ -79,9 +79,9 @@ const addStore = async (req, res) => {
         }   
 
         await logUserActivity({ 
-            heading: "Store",
+            heading: "store",
             currentUserId: currentUserId, 
-            activity: 'You have successfully added a store' 
+            activity: 'you have successfully added a store' 
         });
 
         return res.status(200).json({
@@ -202,9 +202,9 @@ const updateStore = async (req, res) => {
         }
 
         await logUserActivity({ 
-            heading: "Update Store",
+            heading: "update store",
             currentUserId: currentUserId, 
-            activity: 'You have successfully update a store' 
+            activity: 'you have successfully update a store' 
         });
 
         return res.status(200).json({

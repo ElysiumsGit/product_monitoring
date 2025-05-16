@@ -9,35 +9,12 @@ const { sendWelcomeEmail } = require("../emailer/emailer");
 
 const db = firestore();
 
-//=============================================================== A D D  U S E R ==========================================================================
+//!=============================================================== A D D  U S E R ==========================================================================
+
 const addUser = async (req, res) => {
     try {
         const { currentUserId } = req.params;
 
-        // const blob = bucket.file(`avatar/${Date.now()}_${req.file.originalname}`);
-        // const blobStream = blob.createWriteStream({
-        //     metadata: {
-        //         contentType: req.file.mimetype,
-        //         metadata: {
-        //             firebaseStorageDownloadTokens: uuidv4(),
-        //         }
-        //     }
-        // });
-
-        // blobStream.on('error', err => {
-        //     console.error(err);
-        //     return res.status(500).send('Upload error');
-        // });
-
-        // // Wait for the upload to finish
-        // await new Promise((resolve, reject) => {
-        //     blobStream.on('finish', resolve);
-        //     blobStream.on('error', reject);
-        //     blobStream.end(req.file.buffer);
-        // });
-
-        // Get the public URL of the uploaded profile picture
-        // const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(blob.name)}?alt=media&token=${blob.metadata.metadata.firebaseStorageDownloadTokens}`;
         const {
             avatar,
             first_name, 
@@ -53,9 +30,7 @@ const addUser = async (req, res) => {
             role, 
             password, 
             confirm_password, 
-            uid,
             hired_date,
-            collectionName,
             team,
             status,
             is_deleted,
@@ -70,7 +45,7 @@ const addUser = async (req, res) => {
         if (
             !first_name || !last_name || !birth_date || !email || !mobile_number ||
             !region || !province || !municipality || !barangay || !zip_code ||
-            !role || !password || !confirm_password || gender || nationality
+            !role || !password || !confirm_password || !gender || !nationality
         ) {
             return res.status(400).json({ success: false, message: "All fields are required." });
         }
@@ -147,9 +122,9 @@ const addUser = async (req, res) => {
         }
 
         await logUserActivity({ 
-            heading: "Add User",
+            heading: "add User",
             currentUserId: currentUserId, 
-            activity: 'You have successfully added a user' 
+            activity: 'you have successfully added a user' 
         });
 
         const result = await sendWelcomeEmail(email, first_name, role, userId);
@@ -172,7 +147,7 @@ const addUser = async (req, res) => {
 };
 
 
-//=============================================================== U P D A T E  U S E R =========================================================================
+//!=============================================================== U P D A T E  U S E R =========================================================================
 
 const updateMyProfile = async(req, res) => {
     try {
@@ -232,22 +207,33 @@ const updateMyProfile = async(req, res) => {
             } else if (key === 'push_notification' && updatableFields[key] !== undefined) {
                 updatedData[key] = updatableFields[key];
             }
+            else if(updatableFields[key] !== undefined && key !== 'on_duty'){
+                if(userDoc.data()[key] !== updatableFields[key]){
+                    hasOtherChanges = true;
+                }
+            }
         }
 
         await userRef.update(updatedData);
 
         if (hasOtherChanges) {
             await logUserActivity({ 
-                heading: "Update User",
+                heading: "update User",
                 currentUserId: currentUserId, 
-                activity: 'You have successfully update a user' 
+                activity: 'you have successfully update a user' 
             });
-        } else if (Object.keys(updatedData).length > 0 && Object.keys(updatedData).every(key => key === 'push_notification')) {
-        } else if (Object.keys(updatedData).length > 0) {
+        } 
+        else if (Object.keys(updatedData).length > 0 && Object.keys(updatedData).every(key => key === 'push_notification')) {
+            return res.status(200).json({ success: true, message: "Push notification updated successfully" });
+        } 
+        else if (Object.keys(updatedData).length > 0 && Object.keys(updatedData).every(key => key === 'on_duty')) {
+            return res.status(200).json({ success: true, message: "User successfully choose attendance" });
+        } 
+        else if (Object.keys(updatedData).length > 0) {
             await logUserActivity({ 
-                heading: "Update User",
+                heading: "update User",
                 currentUserId: currentUserId, 
-                activity: 'You have successfully update a user' 
+                activity: 'you have successfully update a user' 
             });
         }
 
@@ -261,8 +247,6 @@ const updateMyProfile = async(req, res) => {
         });
     }
 };
-
-
 
 //=============================================================== U P D A T E  P A S S W O R D =========================================================================
 // const updatePassword = async (req, res) => {
@@ -383,7 +367,8 @@ const updateMyProfile = async(req, res) => {
 //     }
 // };
 
-//=============================================================== L O G I N =========================================================================
+//!=============================================================== L O G I N =========================================================================
+
 const loginUser = async (req, res) => {
     try {
         const { idToken } = req.body;
@@ -420,9 +405,9 @@ const loginUser = async (req, res) => {
 
         if (!userData.team || userData.team.trim() === "") {
             await logUserActivity({ 
-                heading: "Signed In",
+                heading: "sign in",
                 currentUserId: getId, 
-                activity: 'Account signed in successfully' 
+                activity: 'account signed in successfully' 
             });
 
             return res.status(200).json({
@@ -458,9 +443,9 @@ const loginUser = async (req, res) => {
 
         
         await logUserActivity({ 
-            heading: "Signed In",
+            heading: "signed In",
             currentUserId: getId, 
-            activity: 'Account signed in successfully' 
+            activity: 'account signed in successfully' 
         });
 
         return res.status(200).json({
@@ -525,4 +510,58 @@ const loginUser = async (req, res) => {
 //     }
 // }
 
-module.exports = { addUser, updateMyProfile, loginUser };
+const userAttendance = async(req, res) => {
+    try {
+        const { currentUserId } = req.params;
+        const { on_duty } = req.body;
+
+        if (typeof on_duty !== 'boolean') {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid input. `currentUserId` and `on_duty` (boolean) are required.',
+            });
+        }
+
+        //TODO check date for 24 hrs format because this is not working because the currentHour is only 1 to 12
+        const now = new Date();
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+
+        if(currentHour )
+
+        if (currentHour < 8) {
+            return res.status(400).json({
+                success: false,
+                message: 'Attendance has not started yet. Submissions are allowed from 8:00 AM to 11:00 AM.',
+            });
+        }
+
+        if (currentHour > 11 || (currentHour === 11 && currentMinute > 0)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Attendance submission is only allowed before 11:00 AM.',
+            });
+        }
+
+        const attendanceRef = db.collection('attendance').doc();
+        const attendanceData = {
+            id: currentUserId,
+            on_duty,
+            created_at: Timestamp.now()
+        }
+
+        await attendanceRef.set(attendanceData);
+
+        return res.status(200).json({
+            success: true,
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to fetch user data',
+        });
+    }
+}
+
+module.exports = { addUser, updateMyProfile, loginUser, userAttendance };

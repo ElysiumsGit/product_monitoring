@@ -46,6 +46,15 @@ const getUserNameById = async (userId) => {
     return userData.first_name || "Unknown User";
 };
 
+const updateMark = async({currentUserId}) => {
+    const markRef = db.collection('users').doc(currentUserId).doc();
+    const markData = {
+        on_duty: true
+    };
+
+    await markRef.set(markData);
+}
+
 
 const getEmailById = async (userId) => {
     const userDoc = await db.collection("users").doc(userId).get();

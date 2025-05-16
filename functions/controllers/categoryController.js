@@ -37,9 +37,9 @@ const addCategory = async(req, res) => {
         }
 
         await logUserActivity({ 
-            heading: "Add Category",
+            heading: "add category",
             currentUserId: currentUserId, 
-            activity: 'You have successfully added a category' 
+            activity: 'you have successfully added a category' 
         });
 
         return res.status(200).json({ success: true, message: "Category Successfully Added" });
@@ -79,9 +79,9 @@ const updateCategory = async (req, res) => {
         }
         
         await logUserActivity({ 
-            heading: "Update Group",
+            heading: "update group",
             currentUserId: currentUserId, 
-            activity: 'You have successfully update a group' 
+            activity: 'you have successfully update a group' 
         });
 
         return res.status(200).json({ success: true, message: "Category successfully updated" });
@@ -119,9 +119,9 @@ const deleteCategory = async (req, res) => {
         }
 
         await logUserActivity({ 
-            heading: "Delete Category",
+            heading: "delete category",
             currentUserId: currentUserId, 
-            activity: 'You have deleted a category' 
+            activity: 'you have deleted a category' 
         });
 
         return res.status(200).json({ success: true, message: "Category successfully deleted" });

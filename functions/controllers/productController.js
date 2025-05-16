@@ -47,9 +47,9 @@ const addProduct = async(req, res) => {
         }
         await productRef.set(userProduct);
         await logUserActivity({ 
-            heading: "Add Product",
+            heading: "add product",
             currentUserId: currentUserId, 
-            activity: 'You have successfully added a product' 
+            activity: 'you have successfully added a product' 
         });
 
         return res.status(200).json({
@@ -174,9 +174,9 @@ const updateProduct = async(req, res) => {
         }
         
         await logUserActivity({ 
-            heading: "Update Product",
+            heading: "update product",
             currentUserId: currentUserId, 
-            activity: 'You have successfully updated a product' 
+            activity: 'you have successfully updated a product' 
         });
 
         return res.status(200).json({success: true, message: "Product Updated Success"})
@@ -209,9 +209,9 @@ const deleteProduct = async (req, res) => {
         }
 
         await logUserActivity({ 
-            heading: "Delete Product",
+            heading: "delete product",
             currentUserId: currentUserId, 
-            activity: 'You have deleted a product' 
+            activity: 'you have deleted a product' 
         });
 
         await productRef.update({
