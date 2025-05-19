@@ -5,6 +5,8 @@ const { sendAdminNotifications, getUserNameById, logUserActivity, getUserRoleByI
 
 const db = firestore();
 
+//!=============================================================== A D D   S T O R E =========================================================================
+
 const addStore = async (req, res) => {
     try {
         const { currentUserId } = req.params;
@@ -100,8 +102,9 @@ const addStore = async (req, res) => {
     }
 };
 
-//=============================================================== U P D A T E   S T O R E =========================================================================
-const updateStore = async (req, res) => {
+//!=============================================================== U P D A T E   S T O R E =========================================================================
+
+const updateStore = async(req, res) => {
     try {
         const { storeId, currentUserId } = req.params;
 
@@ -112,116 +115,209 @@ const updateStore = async (req, res) => {
             radius,
             contact_name,
             contact_number,
-            display_information,
-            ...other_data
         } = req.body;
 
-        if (
-            !store_name || !location || !contact_name || !contact_number ||
-            !Array.isArray(display_information) || display_information.length === 0 ||
-            display_information.some(display => !display.product || !display.display_name)
-        ) {
-            return res.status(400).json({ success: false, message: "All fields are required." });
-        }
-
-        const productChecks = await Promise.all(
-            display_information.map(async (display) => {
-                const productDoc = await db.collection('products').doc(display.product).get();
-                return productDoc.exists;
-            })
-        );
-
-        if (!productChecks.every(Boolean)) {
-            return res.status(400).json({ success: false, message: "One or more product IDs are invalid." });
-        }
-
         const storeRef = db.collection('stores').doc(storeId);
-        const storeDoc = await storeRef.get();
-        if (!storeDoc.exists) {
-            return res.status(404).json({ success: false, message: "Store not found" });
-        }
-
-        const updatedStoreData = {
+        
+        const storeData = {
             store_profile,
             store_name,
             location,
             radius,
             contact_name,
             contact_number,
-            ...other_data,
-            updated_at: Timestamp.now(),
-        };
-        await storeRef.update(updatedStoreData);
+        }
 
-        const displayInfoRef = storeRef.collection('display_information');
+        await storeRef.update(storeData);
 
-        const receivedIds = new Set();
+        const getRole = await getUserRoleById(currentUserId);
+        const currentUserName = await getUserNameById(currentUserId);
 
-        for (const display of display_information) {
-            let displayRef;
+        if (getRole === "agent") {
+            await sendAdminNotifications(`${currentUserName} has added a store named ${store_name}`, 'store');
+        }
 
-            if (display.id) {
-                displayRef = displayInfoRef.doc(display.id);
-                const displayDoc = await displayRef.get();
+        await logUserActivity({ 
+            heading: "store",
+            currentUserId: currentUserId, 
+            activity: 'you have successfully added a store' 
+        });
 
-                if (displayDoc.exists) {
-                    await displayRef.update({
-                        product: display.product,
-                        display_name: display.display_name,
-                        ...other_data,
-                        updated_at: Timestamp.now(),
-                    });
-                    receivedIds.add(display.id);
-                    continue;
-                }
-            }
+        return res.status(200).json({
+            success: true,
+            message: "Store added successfully and notifications sent.",
+            data: { id: storeId },
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Failed to add store",
+            error: error.message,
+        });
+    }
+}
 
-            displayRef = displayInfoRef.doc(); 
+//!=============================================================== U P D A T E   D I S P L A Y =========================================================================
+
+const addDisplay = async(req, res) => {
+    try {
+        const { storeId, currentUserId } = req.pamars;
+        const { display_information } = req.body;
+
+        if(!Array.isArray(display_information)){
+            res.status(400).json({ success: false, message: 'display information must be an array' });
+        }
+
+
+        const displayRef = db.collection('stores').doc(storeId).collection('display_information').doc();
+
+        for(const display of display_information){
             await displayRef.set({
-                id: displayRef.id,
                 product: display.product,
-                display_name: display.display_name,
-                ...other_data,
-                created_at: Timestamp.now(),
+                display_name: display.name,
             });
-            receivedIds.add(displayRef.id);
-        }
-
-        const existingDocs = await displayInfoRef.get();
-        for (const doc of existingDocs.docs) {
-            if (!receivedIds.has(doc.id)) {
-                await doc.ref.delete();
-            }
-        }
+        };
 
         const currentUserName = await getUserNameById(currentUserId);
         const getRole = await getUserRoleById(currentUserId);
 
         if (getRole === "agent") {
-            await sendAdminNotifications(`${currentUserName} has updated a store named ${store_name}`, 'store');
+            await sendAdminNotifications(`${currentUserName} has added a store named ${store_name}`, 'store');
         }
 
         await logUserActivity({ 
-            heading: "update store",
+            heading: "store display",
             currentUserId: currentUserId, 
-            activity: 'you have successfully update a store' 
-        });
-
-        return res.status(200).json({
-            success: true,
-            message: "Store updated successfully",
-            data: { id: storeId }
+            activity: 'you have successfully added a display information' 
         });
 
     } catch (error) {
-        console.error("Error updating store:", error);
-        return res.status(500).json({
-            success: false,
-            message: "Failed to update store",
-            error: error.message,
-        });
+        
     }
-};
+}
+
+
+// const updateStore = async (req, res) => {
+//     try {
+//         const { storeId, currentUserId } = req.params;
+
+//         const {
+//             store_profile,
+//             store_name,
+//             location,
+//             radius,
+//             contact_name,
+//             contact_number,
+//             display_information,
+//             ...other_data
+//         } = req.body;
+
+//         if (
+//             !store_name || !location || !contact_name || !contact_number ||
+//             !Array.isArray(display_information) || display_information.length === 0 ||
+//             display_information.some(display => !display.product || !display.display_name)
+//         ) {
+//             return res.status(400).json({ success: false, message: "All fields are required." });
+//         }
+
+//         const productChecks = await Promise.all(
+//             display_information.map(async (display) => {
+//                 const productDoc = await db.collection('products').doc(display.product).get();
+//                 return productDoc.exists;
+//             })
+//         );
+
+//         if (!productChecks.every(Boolean)) {
+//             return res.status(400).json({ success: false, message: "One or more product IDs are invalid." });
+//         }
+
+//         const storeRef = db.collection('stores').doc(storeId);
+//         const storeDoc = await storeRef.get();
+//         if (!storeDoc.exists) {
+//             return res.status(404).json({ success: false, message: "Store not found" });
+//         }
+
+//         const updatedStoreData = {
+//             store_profile,
+//             store_name,
+//             location,
+//             radius,
+//             contact_name,
+//             contact_number,
+//             ...other_data,
+//             updated_at: Timestamp.now(),
+//         };
+//         await storeRef.update(updatedStoreData);
+
+//         const displayInfoRef = storeRef.collection('display_information');
+
+//         const receivedIds = new Set();
+
+//         for (const display of display_information) {
+//             let displayRef;
+
+//             if (display.id) {
+//                 displayRef = displayInfoRef.doc(display.id);
+//                 const displayDoc = await displayRef.get();
+
+//                 if (displayDoc.exists) {
+//                     await displayRef.update({
+//                         product: display.product,
+//                         display_name: display.display_name,
+//                         ...other_data,
+//                         updated_at: Timestamp.now(),
+//                     });
+//                     receivedIds.add(display.id);
+//                     continue;
+//                 }
+//             }
+
+//             displayRef = displayInfoRef.doc(); 
+//             await displayRef.set({
+//                 id: displayRef.id,
+//                 product: display.product,
+//                 display_name: display.display_name,
+//                 ...other_data,
+//                 created_at: Timestamp.now(),
+//             });
+//             receivedIds.add(displayRef.id);
+//         }
+
+//         const existingDocs = await displayInfoRef.get();
+//         for (const doc of existingDocs.docs) {
+//             if (!receivedIds.has(doc.id)) {
+//                 await doc.ref.delete();
+//             }
+//         }
+
+//         const currentUserName = await getUserNameById(currentUserId);
+//         const getRole = await getUserRoleById(currentUserId);
+
+//         if (getRole === "agent") {
+//             await sendAdminNotifications(`${currentUserName} has updated a store named ${store_name}`, 'store');
+//         }
+
+//         await logUserActivity({ 
+//             heading: "update store",
+//             currentUserId: currentUserId, 
+//             activity: 'you have successfully update a store' 
+//         });
+
+//         return res.status(200).json({
+//             success: true,
+//             message: "Store updated successfully",
+//             data: { id: storeId }
+//         });
+
+//     } catch (error) {
+//         console.error("Error updating store:", error);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Failed to update store",
+//             error: error.message,
+//         });
+//     }
+// };
 
 
 //=============================================================== D E L E T E   S T O R E =========================================================================

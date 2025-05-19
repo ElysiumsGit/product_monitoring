@@ -19,6 +19,7 @@ const sendAdminNotifications = async (message, type) => {
             type,
         };
 
+
         notificationPromises.push(notificationRef.set(notificationData));
     });
 
@@ -27,13 +28,24 @@ const sendAdminNotifications = async (message, type) => {
 
 const logUserActivity = async ({ currentUserId, activity, heading = 'Input a heading' }) => {
     const activityRef = db.collection("users").doc(currentUserId).collection("activities").doc();
+    const stopWords = new Set(['in']);
+
+    const search_tags = activity
+        .toLowerCase()
+        .replace(/[^\w\s]/g, '') 
+        .split(/\s+/)            
+        .filter(word => word && !stopWords.has(word));      
+
     const activityData = {
         heading,
         activity,
         created_at: Timestamp.now(),
+        search_tags,
     };
+
     await activityRef.set(activityData);
 };
+
 
 const getUserNameById = async (userId) => {
     const userDoc = await db.collection("users").doc(userId).get();

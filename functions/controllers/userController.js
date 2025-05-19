@@ -3,7 +3,7 @@ const { Timestamp } = require("firebase-admin/firestore");
 const admin = require("firebase-admin");
 const { users, activities, notifications, dateToTimeStamp } = require("../utils/utils");
 const { sendAdminNotifications, logUserActivity, getUserNameById, getUserRoleById } = require("../utils/functions");
-const { sendWelcomeEmail } = require("../emailer/emailer");
+const { sendWelcomeEmail, sendVerificationCode } = require("../emailer/emailer");
 // const multer = require('multer');
 // const upload = multer({ storage: multer.memoryStorage() });
 
@@ -441,7 +441,6 @@ const loginUser = async (req, res) => {
         //     hour12: true,
         // });
 
-        
         await logUserActivity({ 
             heading: "signed In",
             currentUserId: getId, 
@@ -466,6 +465,8 @@ const loginUser = async (req, res) => {
         });
     }
 };
+
+
 
 // const getUserData = async (req, res) => {
 //     try {
@@ -522,24 +523,26 @@ const userAttendance = async(req, res) => {
             });
         }
 
-        //TODO check date for 24 hrs format because this is not working because the currentHour is only 1 to 12
         const now = new Date();
-        const currentHour = now.getHours();
-        const currentMinute = now.getMinutes();
 
-        if(currentHour )
+        const phTime = new Date(
+            now.toLocaleString('en-US', { timeZone: 'Asia/Manila' })
+        );
 
-        if (currentHour < 8) {
+        const phHour = phTime.getHours();
+        const phMinute = phTime.getMinutes();
+
+        if (phHour < 8) {
             return res.status(400).json({
                 success: false,
-                message: 'Attendance has not started yet. Submissions are allowed from 8:00 AM to 11:00 AM.',
+                message: 'Too early to attendance',
             });
         }
 
-        if (currentHour > 11 || (currentHour === 11 && currentMinute > 0)) {
+        if (phHour > 11 || (phHour === 11 && phMinute > 0)) {
             return res.status(400).json({
                 success: false,
-                message: 'Attendance submission is only allowed before 11:00 AM.',
+                message: 'Cannot attendance you are late',
             });
         }
 
@@ -554,12 +557,13 @@ const userAttendance = async(req, res) => {
 
         return res.status(200).json({
             success: true,
+            message: "Attendance success"
         });
 
     } catch (error) {
         return res.status(500).json({
             success: false,
-            message: 'Failed to fetch user data',
+            message: 'Attendance failed',
         });
     }
 }
