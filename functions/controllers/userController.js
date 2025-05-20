@@ -2,7 +2,7 @@ const { firestore } = require("firebase-admin");
 const { Timestamp } = require("firebase-admin/firestore");
 const admin = require("firebase-admin");
 const { users, activities, notifications, dateToTimeStamp } = require("../utils/utils");
-const { sendAdminNotifications, logUserActivity, getUserNameById, getUserRoleById } = require("../utils/functions");
+const { sendAdminNotifications, logUserActivity, getUserNameById, getUserRoleById, capitalizeFirstLetter } = require("../utils/functions");
 const { sendWelcomeEmail, sendVerificationCode } = require("../emailer/emailer");
 // const multer = require('multer');
 // const upload = multer({ storage: multer.memoryStorage() });
@@ -118,13 +118,21 @@ const addUser = async (req, res) => {
         
 
         if(roleCurrentUser == "agent"){
-            await sendAdminNotifications(`${currentUserName} added ${first_name} with a role of ${role}`, 'user');
+            await sendAdminNotifications(` ${capitalizeFirstLetter(currentUserName)} added ${capitalizeFirstLetter(first_name)} with a role of ${capitalizeFirstLetter(role)}`, 'user');
         }
 
         await logUserActivity({ 
             heading: "add User",
             currentUserId: currentUserId, 
             activity: 'you have successfully added a user' 
+        });
+
+        const counterRef = db.collection('users').doc(userId).collection('counter').doc('counter_id');
+
+        await counterRef.set({
+            notifications: 0,
+            activities: 0,
+            attempts: 0,
         });
 
         const result = await sendWelcomeEmail(email, first_name, role, userId);

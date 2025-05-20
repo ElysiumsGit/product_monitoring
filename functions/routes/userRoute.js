@@ -3,6 +3,7 @@ const { addUser, updateMyProfile, loginUser, userAttendance  } = require("../con
 const authenticateToken = require("../middleware/authenticateToken");
 const multer = require("multer");
 const { auth } = require("firebase-admin");
+const { resendCode } = require("../controllers/authPasswordController");
 
 // const storage = multer.memoryStorage();
 // const upload = multer({ storage: storage });
@@ -14,5 +15,7 @@ router.post("/login", loginUser);
 router.put("/update/:currentUserId" , updateMyProfile);
 // router.put("/updatePassword/:currentUserId" , updatePassword);
 router.post('/attendance/:currentUserId', userAttendance);
+
+
 
 module.exports = router;

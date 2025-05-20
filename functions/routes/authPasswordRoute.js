@@ -3,8 +3,9 @@ const { updatePassword, getCode, submitCode } = require("../controllers/authPass
 
 const router = express.Router();
 
-router.put("/getCode", getCode);
-router.put("/submitCode/:currentUserId", submitCode);
+router.post("/getCode", getCode);
+// router.put("/resendCode", resendCode);
+router.post("/submitCode", submitCode);
 router.put("/update/:currentUserId", updatePassword);
 
 module.exports = router;

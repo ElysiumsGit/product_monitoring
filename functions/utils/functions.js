@@ -15,7 +15,7 @@ const sendAdminNotifications = async (message, type) => {
             id: notificationRef.id,
             message,
             created_at: Timestamp.now(),
-            isRead: false,
+            is_read: false,
             type,
         };
 
@@ -171,6 +171,12 @@ const notifyTeamMembers = async (userId, message, type = "team") => {
     await Promise.all(notificationPromises);
 };
 
+const capitalizeFirstLetter = (word) => {
+    if (!word) return '';
+    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+}
+
+
 module.exports = { 
     sendAdminNotifications, 
     logUserActivity, 
@@ -181,5 +187,6 @@ module.exports = {
     getProductNameById,
     getCategoryById,
     getEmailById,
-    getGroupNameById
+    getGroupNameById,
+    capitalizeFirstLetter
 }
