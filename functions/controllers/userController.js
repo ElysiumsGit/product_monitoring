@@ -2,7 +2,7 @@ const { firestore } = require("firebase-admin");
 const { Timestamp } = require("firebase-admin/firestore");
 const admin = require("firebase-admin");
 const { users, activities, notifications, dateToTimeStamp } = require("../utils/utils");
-const { sendAdminNotifications, logUserActivity, getUserNameById, getUserRoleById, capitalizeFirstLetter } = require("../utils/functions");
+const { sendAdminNotifications, logUserActivity, getUserNameById, getUserRoleById, capitalizeFirstLetter, incrementNotification } = require("../utils/functions");
 const { sendWelcomeEmail, sendVerificationCode } = require("../emailer/emailer");
 // const multer = require('multer');
 // const upload = multer({ storage: multer.memoryStorage() });
@@ -115,16 +115,15 @@ const addUser = async (req, res) => {
 
         const roleCurrentUser = await getUserRoleById(currentUserId); 
         const currentUserName = await getUserNameById(currentUserId);
-        
 
         if(roleCurrentUser == "agent"){
-            await sendAdminNotifications(` ${capitalizeFirstLetter(currentUserName)} added ${capitalizeFirstLetter(first_name)} with a role of ${capitalizeFirstLetter(role)}`, 'user');
-        }
+            await sendAdminNotifications(`${capitalizeFirstLetter(currentUserName)} created an account for ${capitalizeFirstLetter(first_name)} with the role of ${capitalizeFirstLetter(role)}`, 'user');
+        };
 
         await logUserActivity({ 
-            heading: "add User",
+            heading: "account",
             currentUserId: currentUserId, 
-            activity: 'you have successfully added a user' 
+            activity: 'new account has been created' 
         });
 
         const counterRef = db.collection('users').doc(userId).collection('counter').doc('counter_id');
@@ -182,7 +181,7 @@ const updateMyProfile = async(req, res) => {
 
         if (!userDoc.exists) {
             return res.status(404).json({ success: false, message: "Need current User Id." });
-        }
+        }   
 
         const updatedData = {
             ...otherData,
@@ -239,15 +238,32 @@ const updateMyProfile = async(req, res) => {
         } 
         else if (Object.keys(updatedData).length > 0) {
             await logUserActivity({ 
-                heading: "update User",
+                heading: "account",
                 currentUserId: currentUserId, 
-                activity: 'you have successfully update a user' 
+                activity: 'account has been updated' 
             });
         }
 
         return res.status(200).json({ success: true, message: "User updated successfully." });
     } catch (error) {
         console.error("Error updating profile:", error);
+
+        const isNetworkError = [
+            'ECONNRESET',
+            'ENOTFOUND',
+            'ETIMEDOUT',
+            'EAI_AGAIN',
+            'UNAVAILABLE'
+        ].includes(error.code);
+
+        if (isNetworkError) {
+            return res.status(503).json({
+                success: false,
+                message: "Service unavailable. Please check your internet connection and try again.",
+                error: error.message,
+            });
+        }
+
         return res.status(500).json({
             success: false,
             message: "Internal server error.",
@@ -466,6 +482,23 @@ const loginUser = async (req, res) => {
 
     } catch (error) {
         console.error("Error verifying ID token:", error);
+
+        const isNetworkError = [
+            'ECONNRESET',
+            'ENOTFOUND',
+            'ETIMEDOUT',
+            'EAI_AGAIN',
+            'UNAVAILABLE'
+        ].includes(error.code);
+
+        if (isNetworkError) {
+            return res.status(503).json({
+                success: false,
+                message: "Service unavailable. Please check your internet connection and try again.",
+                error: error.message,
+            });
+        }
+
         return res.status(401).json({
             success: false,
             message: "Unauthorized",

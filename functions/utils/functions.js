@@ -1,5 +1,6 @@
 const { firestore } = require("firebase-admin");
-const { Timestamp } = require("firebase-admin/firestore");
+const { Timestamp, FieldValue } = require("firebase-admin/firestore");
+const admin = require('firebase-admin');
 
 const db = firestore();
 
@@ -10,6 +11,7 @@ const sendAdminNotifications = async (message, type) => {
     adminUsersSnapshot.forEach((adminDoc) => {
         const adminId = adminDoc.id;
         const notificationRef = db.collection("users").doc(adminId).collection("notifications").doc();
+        const counterRef = db.collection("users").doc(adminId).collection("counter").doc("counter_id");
 
         const notificationData = {
             id: notificationRef.id,
@@ -19,16 +21,24 @@ const sendAdminNotifications = async (message, type) => {
             type,
         };
 
-
-        notificationPromises.push(notificationRef.set(notificationData));
+        notificationPromises.push(
+            Promise.all([
+                notificationRef.set(notificationData),
+                counterRef.set({
+                    notifications: FieldValue.increment(1),
+                }, { merge: true })
+            ])
+        );
     });
 
     await Promise.all(notificationPromises);
+    console.log("Notifications sent and counters incremented for all admins.");
 };
+
 
 const logUserActivity = async ({ currentUserId, activity, heading = 'Input a heading' }) => {
     const activityRef = db.collection("users").doc(currentUserId).collection("activities").doc();
-    const stopWords = new Set(['in']);
+    const stopWords = new Set(['in', 'been', 'has']);
 
     const search_tags = activity
         .toLowerCase()
@@ -57,16 +67,6 @@ const getUserNameById = async (userId) => {
     const userData = userDoc.data();
     return userData.first_name || "Unknown User";
 };
-
-const updateMark = async({currentUserId}) => {
-    const markRef = db.collection('users').doc(currentUserId).doc();
-    const markData = {
-        on_duty: true
-    };
-
-    await markRef.set(markData);
-}
-
 
 const getEmailById = async (userId) => {
     const userDoc = await db.collection("users").doc(userId).get();
@@ -176,6 +176,19 @@ const capitalizeFirstLetter = (word) => {
     return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
 }
 
+const incrementNotification = async (userId) => {
+    try {
+        const counterRef = db.collection('users').doc(userId).collection('counter').doc('counter_id');
+
+        await counterRef.set({
+            notifications: admin.firestore.FieldValue.increment(1),
+        }, { merge: true });
+
+        console.log(`Notification count incremented for user ${userId}`);
+    } catch (error) {
+        console.error(`Failed to increment notifications for user ${userId}:`, error.message);
+    }
+};
 
 module.exports = { 
     sendAdminNotifications, 
@@ -188,5 +201,6 @@ module.exports = {
     getCategoryById,
     getEmailById,
     getGroupNameById,
-    capitalizeFirstLetter
+    capitalizeFirstLetter,
+    incrementNotification
 }

@@ -72,13 +72,13 @@ const updatePassword = async (req, res) => {
 
 const getCode = async (req, res) => {
     try {
-        const { current_user_id } = req.body;
+        const { currentUserId } = req.params;
 
-        if (!current_user_id) {
-            return res.status(400).json({ status: false, message: "User ID is required" });
+        if (!currentUserId) {
+            return res.status(400).json({ success: false, message: "User ID is required" });
         }
 
-        const counterRef = db.collection('users').doc(current_user_id).collection('counter').doc('counter_id');
+        const counterRef = db.collection('users').doc(currentUserId).collection('counter').doc('counter_id');
         const counterDoc = await counterRef.get();
 
         const now = new Date();
@@ -97,14 +97,14 @@ const getCode = async (req, res) => {
             if (lastAttemptDateStr === todayDateStr) {
                 attempts = data.attempts || 0;
                 if (attempts >= 5) {
-                    return res.status(400).json({ status: false, message: "Maximum attempts reached for today" });
+                    return res.status(400).json({ success: false, message: "Maximum attempts reached for today" });
                 }
             } else {
                 attempts = 0; 
             }
         }
 
-        const code = Math.floor(100000 + Math.random() * 900000);
+        const code = Math.floor(1000 + Math.random() * 9000);
         const code_expires_at = Timestamp.fromDate(new Date(now.getTime() + 3 * 60 * 1000)); // 3 minutes
 
         await counterRef.set({
@@ -114,14 +114,14 @@ const getCode = async (req, res) => {
             last_attempt_date: Timestamp.fromDate(now),
         }, { merge: true });
 
-        const email = await getEmailById(current_user_id);
-        const getUserName = await getUserNameById(current_user_id);
+        const email = await getEmailById(currentUserId);
+        const getUserName = await getUserNameById(currentUserId);
         await sendVerificationCode(email, code, getUserName);
 
-        return res.status(200).json({ status: true, message: "Successfully sent a verification code" });
+        return res.status(200).json({ success: true, message: "Successfully sent a verification code" });
     } catch (error) {
         console.error('getCode error:', error);
-        return res.status(500).json({ status: false, message: "Error sending verification" });
+        return res.status(500).json({ success: false, message: "Error sending verification" });
     }
 };
 
@@ -129,21 +129,17 @@ const getCode = async (req, res) => {
 
 const submitCode = async (req, res) => {
     try {
-        const { code, current_user_id } = req.body;
+        const { currentUserId } = req.params;
+        const { code } = req.body;
 
-        if (!current_user_id || !code) {
-            return res.status(400).json({ status: false, message: "User ID and code are required" });
+        if (!currentUserId || !code) {
+            return res.status(400).json({ success: false, message: "User ID and code are required" });
         }
 
-        const userDoc = await db
-            .collection('users')
-            .doc(current_user_id)
-            .collection('counter')
-            .doc('counter_id') 
-            .get();
+        const userDoc = await db.collection('users').doc(currentUserId).collection('counter').doc('counter_id') .get();
 
         if (!userDoc.exists) {
-            return res.status(404).json({ status: false, message: "Counter data not found" });
+            return res.status(404).json({ success: false, message: "Counter data not found" });
         }
 
         const userData = userDoc.data();
@@ -151,19 +147,19 @@ const submitCode = async (req, res) => {
         const storedCode = userData.code;
 
         if (storedCode !== code) {
-            return res.status(400).json({ status: false, message: "Wrong verification code" });
+            return res.status(400).json({ success: false, message: "Wrong verification code" });
         }
 
         const now = Timestamp.now();
         if (getExpiration && getExpiration.toMillis() < now.toMillis()) {
-            return res.status(400).json({ status: false, message: "This code has expired" });
+            return res.status(400).json({ success: false, message: "This code has expired" });
         }
 
-        return res.status(200).json({ status: true, message: "Success" });
+        return res.status(200).json({ success: true, message: "Success" });
 
     } catch (error) {
         console.error("submitCode error:", error);
-        return res.status(500).json({ status: false, message: "Failed to verify code" });
+        return res.status(500).json({ success: false, message: "Failed to verify code" });
     }
 };
 

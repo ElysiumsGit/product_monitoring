@@ -1,7 +1,7 @@
 const { firestore } = require("firebase-admin");
 const { Timestamp, FieldValue } = require("firebase-admin/firestore");
 const { team, users, activities, notifications } = require("../utils/utils");
-const { logUserActivity } = require("../utils/functions");
+const { logUserActivity, incrementNotification } = require("../utils/functions");
 
 const db = firestore();
 
@@ -33,7 +33,7 @@ const assignTeam = async(req, res) => {
 
             const notificationRef = userRef.collection(notifications).doc();
             const getNotificationId = notificationRef.id;
-            
+
             await userRef.update({
                 team: teamId,
             })
@@ -44,6 +44,8 @@ const assignTeam = async(req, res) => {
                 isRead: false,
                 created_at: Timestamp.now(),
             })
+
+            await incrementNotification(userIds);
         }
 
         await logUserActivity({ 
@@ -128,6 +130,8 @@ const updateTeam = async (req, res) => {
                     isRead: false,
                     created_at: Timestamp.now(),
                 });
+
+                await incrementNotification(userId);
             }
         }
 
@@ -144,6 +148,8 @@ const updateTeam = async (req, res) => {
                 isRead: false,
                 created_at: Timestamp.now(),
             });
+
+            await incrementNotification(userId);
         }
 
         for (const userId of teams) {
@@ -156,6 +162,8 @@ const updateTeam = async (req, res) => {
                     isRead: false,
                     created_at: Timestamp.now(),
                 });
+
+                await incrementNotification(userId);
             }
 
             await userRef.update({
@@ -217,6 +225,9 @@ const deleteTeam = async (req, res) => {
                 type: "team",
                 isRead: false
             });
+
+            await incrementNotification(userRef.id);
+
         });
 
         await Promise.all(userUpdatePromises);

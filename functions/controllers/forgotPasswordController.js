@@ -20,7 +20,7 @@ const forgotPasswordController = async (req, res) => {
         const userId = userDoc.id;
 
         const userRef = db.collection('users').doc(userId);
-        const code = Math.floor(100000 + Math.random() * 900000);
+        const code = Math.floor(1000 + Math.random() * 9000);
         const code_expires_at = Timestamp.fromDate(new Date(Date.now() + 3 * 60 * 1000)); 
 
         await userRef.update({ 

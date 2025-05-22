@@ -1,75 +1,143 @@
 const { firestore } = require("firebase-admin");
+const { FieldValue } = require("firebase-admin/firestore");
 
 const db = firestore();
 
 //!=============================================================== D E L E T E    N O T I F I C A T I O N =========================================================================
 
-const deleteNotification = async(req, res) => {
+const readNotification = async(req, res) => {
     try {
-        const { notificationId, currentUserId  } = req.params;
+        const { currentUserId, notificationId } = req.params;
 
         const notificationRef = db.collection('users').doc(currentUserId).collection('notifications').doc(notificationId);
+        const counterRef = db.collection('users').doc(currentUserId).collection('counter').doc('counter_id');
 
-        const notificationData = {
-            is_deleted: true,
-        }
+        await notificationRef.update({
+            is_read: true,
+        });
 
-        await notificationRef.update(notificationData);
+        await counterRef.update({
+            notifications: FieldValue.increment(-1),
+        });
 
         return res.status(200).json({
             success: true,
-            message: "Notification deleted successfully",
+            message: "Successfully read the notification",
         });
-
+        
     } catch (error) {
         return res.status(500).json({
             success: false,
-            message: "Failed to delete notification"
+            message: "Failed to read"
         });
     }
 }
 
-//!=============================================================== D E L E T E    A L L    N O T I F I C A T I O N =========================================================================
-
-const deleteAllNotification = async (req, res) => {
+const readAllNotifications = async (req, res) => {
     try {
         const { currentUserId } = req.params;
 
-        const notificationsRef = db
-            .collection('users')
-            .doc(currentUserId)
-            .collection('notifications');
-
+        const notificationsRef = db.collection('users').doc(currentUserId).collection('notifications');
         const snapshot = await notificationsRef.get();
+        const counterRef = db.collection('users').doc(currentUserId).collection('counter').doc('counter_id');
 
-        if (snapshot.empty) {
-            return res.status(200).json({
-                success: true,
-                message: 'No notifications to delete.',
-            });
-        }
 
         const batch = db.batch();
 
-        snapshot.forEach(doc => {
-            batch.update(doc.ref, { is_delete: true });
+        snapshot.forEach((doc) => {
+            const notificationRef = notificationsRef.doc(doc.id);
+            batch.update(notificationRef, { is_read: true });
         });
 
         await batch.commit();
 
+        await counterRef.update({
+            notifications: 0,
+        });
+
         return res.status(200).json({
             success: true,
-            message: 'All notifications marked as deleted.',
+            message: "Successfully marked all notifications as read",
         });
 
     } catch (error) {
-        console.error('Failed to delete notifications:', error);
+        console.error("Error marking notifications as read:", error);
         return res.status(500).json({
             success: false,
-            message: 'Something went wrong while deleting notifications.',
+            message: "Failed to mark notifications as read"
         });
     }
 };
+
+
+
+
+// const deleteNotification = async(req, res) => {
+//     try {
+//         const { notificationId, currentUserId  } = req.params;
+
+//         const notificationRef = db.collection('users').doc(currentUserId).collection('notifications').doc(notificationId);
+
+//         const notificationData = {
+//             is_deleted: true,
+//         }
+
+//         await notificationRef.update(notificationData);
+
+//         return res.status(200).json({
+//             success: true,
+//             message: "Notification deleted successfully",
+//         });
+
+//     } catch (error) {
+//         return res.status(500).json({
+//             success: false,
+//             message: "Failed to delete notification"
+//         });
+//     }
+// }
+
+//!=============================================================== D E L E T E    A L L    N O T I F I C A T I O N =========================================================================
+
+// const deleteAllNotification = async (req, res) => {
+//     try {
+//         const { currentUserId } = req.params;
+
+//         const notificationsRef = db
+//             .collection('users')
+//             .doc(currentUserId)
+//             .collection('notifications');
+
+//         const snapshot = await notificationsRef.get();
+
+//         if (snapshot.empty) {
+//             return res.status(200).json({
+//                 success: true,
+//                 message: 'No notifications to delete.',
+//             });
+//         }
+
+//         const batch = db.batch();
+
+//         snapshot.forEach(doc => {
+//             batch.update(doc.ref, { is_delete: true });
+//         });
+
+//         await batch.commit();
+
+//         return res.status(200).json({
+//             success: true,
+//             message: 'All notifications marked as deleted.',
+//         });
+
+//     } catch (error) {
+//         console.error('Failed to delete notifications:', error);
+//         return res.status(500).json({
+//             success: false,
+//             message: 'Something went wrong while deleting notifications.',
+//         });
+//     }
+// };
 
 
 
@@ -170,4 +238,4 @@ const deleteAllNotification = async (req, res) => {
 //     }
 // };
 
-module.exports = { deleteNotification, deleteAllNotification };
+module.exports = { readNotification, readAllNotifications };
