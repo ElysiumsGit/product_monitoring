@@ -1,5 +1,6 @@
 const express = require("express");
 const { readNotification, readAllNotifications } = require("../controllers/notificationController");
+const authenticateToken = require("../middleware/authenticateToken");
 
 const router = express.Router();
 
@@ -9,7 +10,7 @@ const router = express.Router();
 // router.put('/delete/:notificationId/:currentUserId', deleteNotification);
 // router.put('/delete/:currentUserId', deleteAllNotification);
 
-router.get('/read/:currentUserId/:notificationId', readNotification);
-router.get('/readAllNotification/:currentUserId', readAllNotifications);
+router.get('/read/:currentUserId/:notificationId', authenticateToken,  readNotification);
+router.get('/readAllNotification/:currentUserId', authenticateToken, readAllNotifications);
 
 module.exports = router;

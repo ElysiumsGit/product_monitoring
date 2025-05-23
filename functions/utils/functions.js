@@ -1,40 +1,61 @@
 const { firestore } = require("firebase-admin");
 const { Timestamp, FieldValue } = require("firebase-admin/firestore");
 const admin = require('firebase-admin');
+const { link } = require("joi");
 
 const db = firestore();
 
-const sendAdminNotifications = async (message, type) => {
+const sendAdminNotifications = async ({fcmMessage = "FCM Message", message = "Message", type}) => {
     const adminUsersSnapshot = await db.collection("users").where("role", "==", "admin").get();
     const notificationPromises = [];
 
-    adminUsersSnapshot.forEach((adminDoc) => {
+    for (const adminDoc of adminUsersSnapshot.docs) {
         const adminId = adminDoc.id;
-        const notificationRef = db.collection("users").doc(adminId).collection("notifications").doc();
-        const counterRef = db.collection("users").doc(adminId).collection("counter").doc("counter_id");
+        const adminData = adminDoc.data();
 
-        const notificationData = {
-            id: notificationRef.id,
-            message,
-            created_at: Timestamp.now(),
-            is_read: false,
-            type,
-        };
+        if (adminData.push_notification === true) {
+            const notificationRef = db.collection("users").doc(adminId).collection("notifications").doc();
+            const counterRef = db.collection("users").doc(adminId).collection("counter").doc("counter_id");
 
-        notificationPromises.push(
-            Promise.all([
+            const notificationData = {
+                id: notificationRef.id,
+                message,
+                created_at: Timestamp.now(),
+                is_read: false,
+                type,
+            };
+
+            const firestoreTasks = Promise.all([
                 notificationRef.set(notificationData),
                 counterRef.set({
                     notifications: FieldValue.increment(1),
                 }, { merge: true })
-            ])
-        );
-    });
+            ]);
+
+            notificationPromises.push(firestoreTasks);
+
+            if (adminData.fcm_token) {
+                const fcmData = {
+                    token: adminData.fcm_token,
+                    notification: {
+                        title: 'New Notification',
+                        body: fcmMessage,
+                    },
+                    data: {
+                        type,
+                        id: notificationRef.id,
+                        link: "https://fcm.googleapis.com/fcm/send",
+                    },
+                };
+
+                notificationPromises.push(admin.messaging().send(fcmData));
+            }
+        }
+    }
 
     await Promise.all(notificationPromises);
-    console.log("Notifications sent and counters incremented for all admins.");
+    console.log("Notifications sent (Firestore + FCM) for all admins.");
 };
-
 
 const logUserActivity = async ({ currentUserId, activity, heading = 'Input a heading' }) => {
     const activityRef = db.collection("users").doc(currentUserId).collection("activities").doc();

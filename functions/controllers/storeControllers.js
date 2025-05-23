@@ -62,7 +62,11 @@ const addStore = async (req, res) => {
         };
 
         if (getRole === "agent") {
-            await sendAdminNotifications(`${currentUserName} has added a store named ${store_name}`, 'store');
+            await sendAdminNotifications({
+                fcmMessage: "You have one notification in store",
+                message: `${currentUserName} has been added a store named ${store_name}`,
+                type: 'store'
+            })
         }
 
         await storeRef.set(storeData);
@@ -134,7 +138,11 @@ const updateStore = async(req, res) => {
         const currentUserName = await getUserNameById(currentUserId);
 
         if (getRole === "agent") {
-            await sendAdminNotifications(`${currentUserName} has added a store named ${store_name}`, 'store');
+            await sendAdminNotifications({
+                fcmMessage: "You have one notification in store",
+                message: `${currentUserName} has been updated a store named ${store_name}`,
+                type: 'store'
+            })
         }
 
         await logUserActivity({ 
@@ -180,9 +188,14 @@ const addDisplay = async(req, res) => {
 
         const currentUserName = await getUserNameById(currentUserId);
         const getRole = await getUserRoleById(currentUserId);
+        const storeName = await getStoreNameById(storeId);
 
         if (getRole === "agent") {
-            await sendAdminNotifications(`${currentUserName} has added a store named ${store_name}`, 'store');
+            await sendAdminNotifications({
+                fcmMessage: "You have one notification in store",
+                message: `${currentUserName} has been updated a display store named ${storeName}`,
+                type: 'store'
+            })
         }
 
         await logUserActivity({ 

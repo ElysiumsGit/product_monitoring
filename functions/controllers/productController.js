@@ -43,7 +43,11 @@ const addProduct = async(req, res) => {
         };
 
         if(getRole === "agent"){
-            await sendAdminNotifications(`${currentUserName} has added a product named ${product_name}`, `product`);
+            await sendAdminNotifications({
+                fcmMessage: "You have one notification in product",
+                message: `${currentUserName} has been added a product named ${product_name}`,
+                type: 'product'
+            })
         }
         await productRef.set(userProduct);
         await logUserActivity({ 
@@ -170,7 +174,11 @@ const updateProduct = async(req, res) => {
         await productRef.update(updatedProduct);
 
         if(getRole === "agent"){
-            await sendAdminNotifications(`${currentUserName} updated a product named ${product_name}`, `product`);
+             await sendAdminNotifications({
+                fcmMessage: "You have one notification in product",
+                message: `${currentUserName} has been added a product named ${product_name}`,
+                type: 'product'
+            })
         }
         
         await logUserActivity({ 
@@ -205,7 +213,11 @@ const deleteProduct = async (req, res) => {
         const getProductName = await getProductNameById(productId);
 
         if (getRole === "agent") {
-            await sendAdminNotifications(`${currentUserName} deleted a product named ${getProductName}`, "product");
+            await sendAdminNotifications({
+                fcmMessage: "You have one notification in product",
+                message: `${currentUserName} has been added a product named ${getProductName}`,
+                type: 'product'
+            })
         }
 
         await logUserActivity({ 

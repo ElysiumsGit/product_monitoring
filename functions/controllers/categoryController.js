@@ -33,7 +33,12 @@ const addCategory = async(req, res) => {
         const getRole = await getUserRoleById(currentUserId);
 
         if(getRole === 'agent'){
-            await sendAdminNotifications(`${getUserName} has been added a category in product named ${category_name}`, 'category');
+            await sendAdminNotifications({
+                fcmMessage: "You have one notification in category",
+                message: `${getUserName} has been added a category in product named ${category_name}`,
+                type: 'category'
+            })
+                
         }
 
         await logUserActivity({ 
@@ -75,7 +80,11 @@ const updateCategory = async (req, res) => {
         const getRole = await getUserRoleById(currentUserId);
 
         if(getRole === 'agent'){
-            await sendAdminNotifications(`${getUserName} has been updated a category in product named ${category_name}`, 'category');
+            await sendAdminNotifications({
+                fcmMessage: "You have one notification in category",
+                message: `${getUserName} has been added a category in product named ${category_name}`,
+                type: 'category'
+            })
         }
         
         await logUserActivity({ 
@@ -115,7 +124,11 @@ const deleteCategory = async (req, res) => {
         const getCategoryName = await getCategoryById(categoryId);
 
         if(getRole === 'agent'){
-            await sendAdminNotifications(`${getUserName} has been deleted a category in product, named ${getCategoryName}`, 'category');
+            await sendAdminNotifications({
+                fcmMessage: "You have one notification in category",
+                message: `${getUserName} has been added a category in product named ${category_name}`,
+                type: 'category'
+            })
         }
 
         await logUserActivity({ 

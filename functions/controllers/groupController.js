@@ -45,7 +45,11 @@ const addGroup = async (req, res) => {
         const getRole = await getUserRoleById(currentUserId);
 
         if(getRole === 'agent'){
-            await sendAdminNotifications(`${getUserName} has added a group named ${group_name}`, 'group');
+          await sendAdminNotifications({
+              fcmMessage: "You have one notification in category",
+              message: `${getUserName} has added a group named ${group_name}`,
+              type: 'group'
+          })
         }
         await logUserActivity({ 
             heading: "add group",
@@ -101,7 +105,11 @@ const updateGroup = async (req, res) => {
       const getRole = await getUserRoleById(currentUserId);
   
       if (getRole === 'agent') {
-        await sendAdminNotifications(`${getUserName} has updated the group ${group_name}`, 'group');
+        await sendAdminNotifications({
+            fcmMessage: "You have one notification in category",
+            message: `${getUserName} has updated a group named ${group_name}`,
+            type: 'group'
+        })
       }
   
       await logUserActivity({ 
@@ -152,7 +160,11 @@ const deleteGroup = async(req, res) => {
         const groupName = await getGroupNameById(groupId);
   
         if (getRole === 'agent') {
-          await sendAdminNotifications(`${getUserName} has deleted the group ${groupName}`, 'group');
+          await sendAdminNotifications({
+            fcmMessage: "You have one notification in category",
+            message: `${getUserName} has updated a group named ${groupName}`,
+            type: 'group'
+          })
         }
   
         await logUserActivity({ 

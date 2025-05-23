@@ -18,7 +18,7 @@ const categoryRoute = require("./routes/categoryRoute");
 const verifyRoute = require("./routes/verifyRoute");
 const forgotPasswordRoute = require("./routes/forgotPasswordRoute");
 const authPassword = require("./routes/authPasswordRoute");
-// const inventoryRoute = require("./routes/inventoryRoute");
+const inventoryRoute = require("./routes/inventoryRoute");
 // const scheduleRoute = require("./routes/scheduleRoute");
 const automationRoute = require("./routes/automationRoute");
 const { renderErrorPage } = require('./renderHtml/error');
@@ -39,7 +39,7 @@ app.use("/category", categoryRoute);
 app.use("/verify", verifyRoute);
 app.use("/forgotPassword", forgotPasswordRoute);
 app.use("/auth", authPassword);
-// app.use("/inventoryRoute", inventoryRoute);
+app.use("/inventory", inventoryRoute);
 // app.use("/scheduleRoute", scheduleRoute);
 app.use("/", automationRoute);
 

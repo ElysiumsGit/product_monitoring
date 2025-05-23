@@ -10,7 +10,6 @@ const { sendWelcomeEmail, sendVerificationCode } = require("../emailer/emailer")
 const db = firestore();
 
 //!=============================================================== A D D  U S E R ==========================================================================
-
 const addUser = async (req, res) => {
     try {
         const { currentUserId } = req.params;
@@ -106,6 +105,7 @@ const addUser = async (req, res) => {
             gender,
             street: "",
             nationality,
+
             push_notification: false,
             ...otherData,
             created_at: Timestamp.now(),
@@ -117,7 +117,11 @@ const addUser = async (req, res) => {
         const currentUserName = await getUserNameById(currentUserId);
 
         if(roleCurrentUser == "agent"){
-            await sendAdminNotifications(`${capitalizeFirstLetter(currentUserName)} created an account for ${capitalizeFirstLetter(first_name)} with the role of ${capitalizeFirstLetter(role)}`, 'user');
+            await sendAdminNotifications({
+                fcmMessage: "You have one notification in store",
+                message: `${capitalizeFirstLetter(currentUserName)} created an account for ${capitalizeFirstLetter(first_name)} with the role of ${capitalizeFirstLetter(role)}`,
+                type: 'user'
+            })
         };
 
         await logUserActivity({ 
@@ -395,7 +399,7 @@ const updateMyProfile = async(req, res) => {
 
 const loginUser = async (req, res) => {
     try {
-        const { idToken } = req.body;
+        const { idToken, fcmToken } = req.body;
 
         if (!idToken) {
             return res.status(400).json({ success: false, message: "ID token is required." });
@@ -427,11 +431,17 @@ const loginUser = async (req, res) => {
 
         const getId = userData.id;
 
+        const userRef = db.collection('users').doc(getId)
+
         if (!userData.team || userData.team.trim() === "") {
             await logUserActivity({ 
                 heading: "sign in",
                 currentUserId: getId, 
                 activity: 'account signed in successfully' 
+            });
+
+            await userRef.update({
+                fcm_token: fcmToken,
             });
 
             return res.status(200).json({
@@ -469,6 +479,10 @@ const loginUser = async (req, res) => {
             heading: "signed In",
             currentUserId: getId, 
             activity: 'account signed in successfully' 
+        });
+
+        await userRef.update({
+           fcm_token: fcmToken,
         });
 
         return res.status(200).json({
