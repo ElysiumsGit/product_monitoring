@@ -1,7 +1,6 @@
 const { firestore } = require("firebase-admin");
 const { Timestamp, FieldValue } = require("firebase-admin/firestore");
 const admin = require('firebase-admin');
-const { link } = require("joi");
 
 const db = firestore();
 
