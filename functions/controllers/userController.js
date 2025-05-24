@@ -10,6 +10,7 @@ const { sendWelcomeEmail, sendVerificationCode } = require("../emailer/emailer")
 const db = firestore();
 
 //!=============================================================== A D D  U S E R ==========================================================================
+
 const addUser = async (req, res) => {
     try {
         const { currentUserId } = req.params;
@@ -35,7 +36,8 @@ const addUser = async (req, res) => {
             is_deleted,
             is_verified,
             gender,
-            street,
+            address1,
+            address2,
             nationality,
             push_notification, 
             ...otherData
@@ -44,7 +46,7 @@ const addUser = async (req, res) => {
         if (
             !first_name || !last_name || !birth_date || !email || !mobile_number ||
             !region || !province || !municipality || !barangay || !zip_code ||
-            !role || !password || !confirm_password || !gender || !nationality
+            !role || !password || !confirm_password || !gender || !nationality || !address1
         ) {
             return res.status(400).json({ success: false, message: "All fields are required." });
         }
@@ -82,30 +84,29 @@ const addUser = async (req, res) => {
         const userId = userRef.id;
 
         const userData = {
-            // avatar: publicUrl,
             avatar: "",
             id: userId,
             auth_id: getUserUID,
-            first_name, 
-            last_name, 
+            first_name: first_name.toLowerCase(), 
+            last_name: last_name.toLowerCase(), 
             birth_date: birthDateTimestamp, 
-            email, 
+            email: email.toLowerCase(), 
             mobile_number,
-            region, 
-            province, 
-            municipality, 
-            barangay, 
+            region: region.toLowerCase(), 
+            province :province.toLowerCase(), 
+            municipality: municipality.toLowerCase(), 
+            barangay: barangay.toLowerCase(), 
             zip_code,
-            role, 
+            role: role.toLowerCase(), 
             team: "",
             status: "active",
             is_deleted: false,
             is_verified: false,
             hired_date: hiredDateTimestamp,
-            gender,
-            street: "",
-            nationality,
-
+            gender: gender.toLowerCase(),
+            address1: address1.toLowerCase(),
+            address2: address2.toLowerCase(),
+            nationality: nationality.toLowerCase(),
             push_notification: false,
             ...otherData,
             created_at: Timestamp.now(),
@@ -113,12 +114,31 @@ const addUser = async (req, res) => {
 
         await userRef.set(userData);
 
+        await userRef.update({
+            search_tags: [
+                ...first_name.toLowerCase().trim().split(/\s+/), 
+                ...last_name.toLowerCase().trim().split(/\s+/), 
+                email.toLowerCase().trim().split(/\s+/), 
+                mobile_number,
+                ...region.toLowerCase().trim().split(/\s+/), 
+                ...province.toLowerCase().trim().split(/\s+/),
+                ...municipality.toLowerCase().trim().split(/\s+/), 
+                ...barangay.toLowerCase().trim().split(/\s+/), 
+                zip_code,
+                role,
+                gender,  
+                ...address1.toLowerCase().trim().split(/\s+/), 
+                ...address2.toLowerCase().trim().split(/\s+/), 
+                ...nationality.toLowerCase().trim().split(/\s+/), 
+            ].flat().filter(Boolean) 
+        });
+
         const roleCurrentUser = await getUserRoleById(currentUserId); 
         const currentUserName = await getUserNameById(currentUserId);
 
         if(roleCurrentUser == "agent"){
             await sendAdminNotifications({
-                fcmMessage: "You have one notification in store",
+                fcmMessage: `${capitalizeFirstLetter(currentUserName)} created an account named ${capitalizeFirstLetter(first_name)}`,
                 message: `${capitalizeFirstLetter(currentUserName)} created an account for ${capitalizeFirstLetter(first_name)} with the role of ${capitalizeFirstLetter(role)}`,
                 type: 'user'
             })
@@ -157,243 +177,149 @@ const addUser = async (req, res) => {
     }
 };
 
-
 //!=============================================================== U P D A T E  U S E R =========================================================================
 
-const updateMyProfile = async(req, res) => {
+const updateMyProfile = async (req, res) => {
     try {
         const { currentUserId } = req.params;
-        const {
-            first_name,
-            last_name,
-            birth_date,
-            mobile_number,
-            street,
-            region,
-            province,
-            municipality,
-            barangay,
-            zip_code,
-            gender,
-            nationality,
-            push_notification,
-            ...otherData
-        } = req.body;
+        const updates = req.body;
+
+        if (!currentUserId) {
+            return res.status(400).json({ success: false, message: "User ID is required." });
+        }
 
         const userRef = db.collection("users").doc(currentUserId);
         const userDoc = await userRef.get();
 
         if (!userDoc.exists) {
-            return res.status(404).json({ success: false, message: "Need current User Id." });
-        }   
+            return res.status(404).json({ success: false, message: "User not found." });
+        }
 
-        const updatedData = {
-            ...otherData,
-        };
+        const { email, password } = updates;
 
-        const updatableFields = {
-            first_name,
-            last_name,
-            birth_date: birth_date ? dateToTimeStamp(birth_date) : undefined,
-            mobile_number,
-            region,
-            province,
-            municipality,
-            barangay,
-            zip_code,
-            gender,
-            street,
-            nationality,
-            push_notification,
-            ...otherData
-        };
+        let emailExists = false;
+        try {
+            await admin.auth().getUserByEmail(email);
+            emailExists = true;
+        } catch (error) {
+            if (error.code !== 'auth/user-not-found') {
+                console.error(error);
+                return res.status(500).json({ success: false, message: error.message });
+            }
+        }
 
+        if (emailExists) {
+            return res.status(400).json({ success: false, message: "Email already exists." });
+        }
+
+        // Create the new user
+        await admin.auth().createUser({
+            email,
+            password,
+        });
+
+        const allowedFields = [
+            "avatar", "first_name", "last_name", "birth_date", "email", "mobile_number",
+            "region", "province", "municipality", "barangay", "zip_code", "role",
+            "password", "confirm_password", "hired_date", "team", "status",
+            "is_deleted", "is_verified", "gender", "address1", "address2",
+            "nationality", "push_notification", "on_duty"
+        ];
+
+        const updatedData = {};
         let hasOtherChanges = false;
-        for (const key in updatableFields) {
-            if (updatableFields[key] !== undefined && key !== 'push_notification') {
-                if (userDoc.data()[key] !== updatableFields[key]) {
+
+        for (const key of Object.keys(updates)) {
+            if (!allowedFields.includes(key)) {
+                return res.status(400).json({ success: false, message: `Updating "${key}" is not allowed.` });
+            }
+
+            let value = updates[key];
+
+            if (typeof value === "string" && key !== "email") value = value.toLowerCase();
+            if (key === "birth_date") value = dateToTimeStamp(value);
+            if (key === "hired_date") value = dateToTimeStamp(value);
+
+            const oldValue = userDoc.data()[key];
+            if (value !== undefined && value !== oldValue) {
+                updatedData[key] = value;
+                if (key !== "push_notification" && key !== "on_duty") {
                     hasOtherChanges = true;
                 }
-                updatedData[key] = updatableFields[key];
-            } else if (key === 'push_notification' && updatableFields[key] !== undefined) {
-                updatedData[key] = updatableFields[key];
             }
-            else if(updatableFields[key] !== undefined && key !== 'on_duty'){
-                if(userDoc.data()[key] !== updatableFields[key]){
-                    hasOtherChanges = true;
-                }
-            }
+        }
+
+        if (Object.keys(updatedData).length === 0) {
+            return res.status(200).json({ success: true, message: "No changes detected." });
         }
 
         await userRef.update(updatedData);
 
-        if (hasOtherChanges) {
-            await logUserActivity({ 
-                heading: "update User",
-                currentUserId: currentUserId, 
-                activity: 'you have successfully update a user' 
+        const identityFields = [
+            "first_name", "last_name", "email", "mobile_number", "region",
+            "province", "municipality", "barangay", "zip_code", "role",
+            "gender", "address1", "address2", "nationality"
+        ];
+
+        const shouldUpdateTags = identityFields.some(field => updatedData.hasOwnProperty(field));
+
+        if (shouldUpdateTags) {
+            const user = { ...userDoc.data(), ...updatedData };
+
+            const rawTags = [
+                user.first_name,
+                user.last_name,
+                user.email,
+                user.mobile_number,
+                user.region,
+                user.province,
+                user.municipality,
+                user.barangay,
+                user.zip_code,
+                user.role,
+                user.gender,
+                user.address1,
+                user.address2,
+                user.nationality
+            ];
+
+            const processedTags = rawTags
+                .map(val => typeof val === 'string' ? val.toLowerCase().trim().split(/\s+/) : [val])
+                .flat().filter(Boolean);
+
+            await userRef.update({
+                search_tags: processedTags
             });
-        } 
-        else if (Object.keys(updatedData).length > 0 && Object.keys(updatedData).every(key => key === 'push_notification')) {
-            return res.status(200).json({ success: true, message: "Push notification updated successfully" });
-        } 
-        else if (Object.keys(updatedData).length > 0 && Object.keys(updatedData).every(key => key === 'on_duty')) {
-            return res.status(200).json({ success: true, message: "User successfully choose attendance" });
-        } 
-        else if (Object.keys(updatedData).length > 0) {
-            await logUserActivity({ 
+        }
+
+        if (hasOtherChanges) {
+            await logUserActivity({
+                heading: "update User",
+                currentUserId,
+                activity: "You have successfully updated a user."
+            });
+        } else if (Object.keys(updatedData).length === 1 && updatedData.hasOwnProperty("push_notification")) {
+            return res.status(200).json({ success: true, message: "Push notification updated successfully." });
+        } else if (Object.keys(updatedData).length === 1 && updatedData.hasOwnProperty("on_duty")) {
+            return res.status(200).json({ success: true, message: "User successfully chose attendance." });
+        } else {
+            await logUserActivity({
                 heading: "account",
-                currentUserId: currentUserId, 
-                activity: 'account has been updated' 
+                currentUserId,
+                activity: "Account has been updated."
             });
         }
 
         return res.status(200).json({ success: true, message: "User updated successfully." });
+
     } catch (error) {
-        console.error("Error updating profile:", error);
-
-        const isNetworkError = [
-            'ECONNRESET',
-            'ENOTFOUND',
-            'ETIMEDOUT',
-            'EAI_AGAIN',
-            'UNAVAILABLE'
-        ].includes(error.code);
-
-        if (isNetworkError) {
-            return res.status(503).json({
-                success: false,
-                message: "Service unavailable. Please check your internet connection and try again.",
-                error: error.message,
-            });
-        }
-
         return res.status(500).json({
             success: false,
             message: "Internal server error.",
-            error: error.message,
+            error: error.message
         });
     }
 };
-
-//=============================================================== U P D A T E  P A S S W O R D =========================================================================
-// const updatePassword = async (req, res) => {
-//     try {
-//         const { currentUserId } = req.params;
-//         const { new_password, confirm_new_password } = req.body;
-
-//         if (!new_password || !confirm_new_password) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "All password fields are required.",
-//             });
-//         }
-
-//         if (new_password !== confirm_new_password) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "New passwords do not match.",
-//             });
-//         }
-
-//         const userRef = db.collection('users').doc(currentUserId);
-//         const userSnap = await userRef.get();
-
-//         if (!userSnap.exists) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: "User not found.",
-//             });
-//         }
-
-//         const { uid } = userSnap.data();
-
-//         if (!uid) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "UID not found in user document.",
-//             });
-//         }
-
-//         await admin.auth().updateUser(uid, {
-//             password: new_password,
-//         });
-
-//         await logUserActivity(currentUserId, `You have successfully change your password`)
-
-//         return res.status(200).json({
-//             success: true,
-//             message: "Password updated successfully.",
-//         });
-//     } catch (error) {
-//         console.error("Error updating password:", error);
-//         return res.status(500).json({
-//             success: false,
-//             message: "Internal server error.",
-//             error: error.message,
-//         });
-//     }
-// };
-
-//=============================================================== G E T =========================================================================
-// const getAllUsers = async (req, res) => {
-//     try {
-//         const userRef = db.collection(users); 
-//         const userSnapshot = await userRef.get();
-        
-//         if (userSnapshot.empty) {
-//             return res.status(200).json({
-//                 success: true,
-//                 message: "No data found.",
-//                 data: [],
-//             });
-//         }
-
-//         const data = [];
-//         userSnapshot.forEach(doc => {
-//             data.push({ ...doc.data() });
-//         });
-
-//         res.status(200).json({ success: true, data });
-//     } catch (error) {
-//         console.error("Error fetching users:", error);
-//         return res.status(500).json({
-//             success: false,
-//             message: "Internal server error.",
-//             error: error.message,
-//         });
-//     }
-// };
-
-// const getUser = async (req, res) => {
-//     try {
-//         const { id } = req.params;
-
-//         const userRef = db.collection(users).doc(id);
-//         const doc = await userRef.get(); 
-
-//         if (!doc.exists) {
-//             return res
-//             .status(403)
-//             .send(renderErrorPage(
-//                 "404 – Page Not Found",
-//                 "The page you’re looking for doesn’t exist.",
-//                 "Please check the URL for any mistakes."
-//             ));
-//         }
-
-//         const userData = doc.data();
-
-//         return res.status(200).json({ success: true, data: userData });
-//     } catch (error) {
-//         console.error("Error fetching user:", error);
-//         return res.status(500).json({
-//             success: false,
-//             message: "Internal server error.",
-//             error: error.message,
-//         });
-//     }
-// };
 
 //!=============================================================== L O G I N =========================================================================
 
@@ -521,50 +447,7 @@ const loginUser = async (req, res) => {
     }
 };
 
-
-
-// const getUserData = async (req, res) => {
-//     try {
-//         res.send("Hello World");
-//     } catch (error) {
-//         console.log(error);
-//     }
-// }
-
-// const getUserData = async (req, res) => {
-//     try {
-//         const authHeader = req.headers.authorization;
-//         if (!authHeader || !authHeader.startsWith('Bearer ')) {
-//             return res.status(401).json({ success: false, message: "No token provided" });
-//         }
-
-//         const idToken = authHeader.split(' ')[1];
-//         const decodedToken = await admin.auth().verifyIdToken(idToken);
-//         const { uid } = decodedToken;
-
-//         const snapshot = await db.collection('users').where('uid', '==', uid).get();
-
-//         if (snapshot.empty) {
-//             return res.status(404).json({ success: false, message: "User not found." });
-//         }
-
-//         const userDoc = snapshot.docs[0];
-//         const userData = userDoc.data();
-
-//         return res.status(200).json({
-//             success: true,
-//             user: userData,  
-//         });
-
-//     } catch (error) {
-//         console.error('Error fetching user data:', error);
-//         return res.status(500).json({
-//             success: false,
-//             message: 'Failed to fetch user data',
-//             error: error.message,
-//         });
-//     }
-// }
+//!=============================================================== L O G I N =========================================================================
 
 const userAttendance = async(req, res) => {
     try {

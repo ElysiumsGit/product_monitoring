@@ -37,7 +37,7 @@ const sendAdminNotifications = async ({fcmMessage = "FCM Message", message = "Me
                 const fcmData = {
                     token: adminData.fcm_token,
                     notification: {
-                        title: 'New Notification',
+                        title: "You have one notification in Store Watch",
                         body: fcmMessage,
                     },
                     data: {
@@ -210,6 +210,27 @@ const incrementNotification = async (userId) => {
     }
 };
 
+// const generateSearchTags = (user) => {
+
+//     return [
+//         user.first_name?.toLowerCase(),
+//         user.last_name?.toLowerCase(),
+//         user.email?.toLowerCase(),
+//         user.mobile_number,
+//         user.region?.toLowerCase(),
+//         user.province?.toLowerCase(),
+//         user.municipality?.toLowerCase(),
+//         user.barangay?.toLowerCase(),
+//         user.zip_code,
+//         user.role?.toLowerCase(),
+//         user.gender?.toLowerCase(),
+//         user.address1?.toLowerCase(),
+//         user.address2?.toLowerCase(),
+//         user.nationality?.toLowerCase()
+//     ].filter(Boolean); 
+// };
+
+
 module.exports = { 
     sendAdminNotifications, 
     logUserActivity, 
@@ -222,5 +243,6 @@ module.exports = {
     getEmailById,
     getGroupNameById,
     capitalizeFirstLetter,
-    incrementNotification
+    incrementNotification,
+    // generateSearchTags
 }
