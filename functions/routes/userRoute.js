@@ -10,10 +10,8 @@ const { resendCode } = require("../controllers/authPasswordController");
 
 const router = express.Router();
 router.post("/add/:currentUserId", addUser);
-// router.post("/addUser/:currentUserId", upload.single('avatar'), addUser);
 router.post("/login", loginUser);
 router.put("/update/:currentUserId" , updateMyProfile);
-// router.put("/updatePassword/:currentUserId" , updatePassword);
 router.post('/attendance/:currentUserId', userAttendance);
 
 

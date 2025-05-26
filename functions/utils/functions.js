@@ -231,6 +231,14 @@ const incrementNotification = async (userId) => {
 // };
 
 
+const safeSplit = (input) => {
+  const words = input.trim().split(/\s+/);
+  const hasShortWord = words.some(word => word.length === 1);
+
+  return hasShortWord ? [input.trim()] : words;
+};
+
+
 module.exports = { 
     sendAdminNotifications, 
     logUserActivity, 
@@ -244,5 +252,6 @@ module.exports = {
     getGroupNameById,
     capitalizeFirstLetter,
     incrementNotification,
+    safeSplit,
     // generateSearchTags
 }

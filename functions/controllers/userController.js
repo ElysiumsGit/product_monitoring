@@ -2,7 +2,7 @@ const { firestore } = require("firebase-admin");
 const { Timestamp } = require("firebase-admin/firestore");
 const admin = require("firebase-admin");
 const { users, activities, notifications, dateToTimeStamp } = require("../utils/utils");
-const { sendAdminNotifications, logUserActivity, getUserNameById, getUserRoleById, capitalizeFirstLetter, incrementNotification } = require("../utils/functions");
+const { sendAdminNotifications, logUserActivity, getUserNameById, getUserRoleById, capitalizeFirstLetter, incrementNotification, safeSplit } = require("../utils/functions");
 const { sendWelcomeEmail, sendVerificationCode } = require("../emailer/emailer");
 // const multer = require('multer');
 // const upload = multer({ storage: multer.memoryStorage() });
@@ -24,13 +24,14 @@ const addUser = async (req, res) => {
             mobile_number,
             region, 
             province, 
-            municipality, 
+            city, 
             barangay, 
             zip_code,
             role, 
+            manage_store,
+            manage_account,
             password, 
             confirm_password, 
-            hired_date,
             team,
             status,
             is_deleted,
@@ -45,7 +46,7 @@ const addUser = async (req, res) => {
 
         if (
             !first_name || !last_name || !birth_date || !email || !mobile_number ||
-            !region || !province || !municipality || !barangay || !zip_code ||
+            !region || !province || !city || !barangay ||
             !role || !password || !confirm_password || !gender || !nationality || !address1
         ) {
             return res.status(400).json({ success: false, message: "All fields are required." });
@@ -55,7 +56,6 @@ const addUser = async (req, res) => {
             return res.status(400).json({ success: false, message: "Passwords do not match." });
         }
 
-        const hiredDateTimestamp = dateToTimeStamp(hired_date);
         const birthDateTimestamp = dateToTimeStamp(birth_date);
 
         let emailExists = false;
@@ -73,7 +73,6 @@ const addUser = async (req, res) => {
             return res.status(400).json({ success: false, message: "Email already exists." });
         }
 
-        // Create the new user
         const getUID = await admin.auth().createUser({
             email,
             password,
@@ -94,15 +93,16 @@ const addUser = async (req, res) => {
             mobile_number,
             region: region.toLowerCase(), 
             province :province.toLowerCase(), 
-            municipality: municipality.toLowerCase(), 
+            city: city.toLowerCase(), 
             barangay: barangay.toLowerCase(), 
             zip_code,
             role: role.toLowerCase(), 
+            manage_store,
+            manage_account,
             team: "",
-            status: "active",
+            status: "inactive",
             is_deleted: false,
             is_verified: false,
-            hired_date: hiredDateTimestamp,
             gender: gender.toLowerCase(),
             address1: address1.toLowerCase(),
             address2: address2.toLowerCase(),
@@ -116,33 +116,30 @@ const addUser = async (req, res) => {
 
         await userRef.update({
             search_tags: [
-                ...first_name.toLowerCase().trim().split(/\s+/), 
-                ...last_name.toLowerCase().trim().split(/\s+/), 
+                ...safeSplit(first_name.toLowerCase()),
+                ...safeSplit(last_name.toLowerCase()), 
                 email.toLowerCase().trim().split(/\s+/), 
                 mobile_number,
-                ...region.toLowerCase().trim().split(/\s+/), 
-                ...province.toLowerCase().trim().split(/\s+/),
-                ...municipality.toLowerCase().trim().split(/\s+/), 
-                ...barangay.toLowerCase().trim().split(/\s+/), 
+                ...safeSplit(region.toLowerCase()), 
+                ...safeSplit(province.toLowerCase()),
+                ...safeSplit(city.toLowerCase()), 
+                ...safeSplit(barangay.toLowerCase()), 
                 zip_code,
                 role,
                 gender,  
-                ...address1.toLowerCase().trim().split(/\s+/), 
-                ...address2.toLowerCase().trim().split(/\s+/), 
-                ...nationality.toLowerCase().trim().split(/\s+/), 
+                ...safeSplit(address1.toLowerCase()), 
+                ...safeSplit(address2.toLowerCase()), 
+                ...safeSplit(nationality.toLowerCase()), 
             ].flat().filter(Boolean) 
         });
 
-        const roleCurrentUser = await getUserRoleById(currentUserId); 
         const currentUserName = await getUserNameById(currentUserId);
 
-        if(roleCurrentUser == "agent"){
-            await sendAdminNotifications({
-                fcmMessage: `${capitalizeFirstLetter(currentUserName)} created an account named ${capitalizeFirstLetter(first_name)}`,
-                message: `${capitalizeFirstLetter(currentUserName)} created an account for ${capitalizeFirstLetter(first_name)} with the role of ${capitalizeFirstLetter(role)}`,
-                type: 'user'
-            })
-        };
+        await sendAdminNotifications({
+            fcmMessage: `${capitalizeFirstLetter(currentUserName)} created an account named ${capitalizeFirstLetter(first_name)}`,
+            message: `${capitalizeFirstLetter(currentUserName)} created an account for ${capitalizeFirstLetter(first_name)} with the role of ${capitalizeFirstLetter(role)}`,
+            type: 'user'
+        })
 
         await logUserActivity({ 
             heading: "account",
@@ -195,35 +192,34 @@ const updateMyProfile = async (req, res) => {
             return res.status(404).json({ success: false, message: "User not found." });
         }
 
+        const currentEmail = userDoc.data().email;
         const { email, password } = updates;
 
-        let emailExists = false;
-        try {
-            await admin.auth().getUserByEmail(email);
-            emailExists = true;
-        } catch (error) {
-            if (error.code !== 'auth/user-not-found') {
-                console.error(error);
-                return res.status(500).json({ success: false, message: error.message });
+        if (email && email !== currentEmail) {
+            // Check if email already exists in Firebase Auth
+            try {
+                const userRecord = await admin.auth().getUserByEmail(email);
+                if (userRecord && userRecord.uid !== currentUserId) {
+                    return res.status(400).json({ success: false, message: "Email already exists." });
+                }
+            } catch (error) {
+                if (error.code !== 'auth/user-not-found') {
+                    console.error(error);
+                    return res.status(500).json({ success: false, message: error.message });
+                }
+                // If user-not-found, it's safe to proceed
             }
+            await admin.auth().createUser({
+                email,
+                password,
+            });
         }
-
-        if (emailExists) {
-            return res.status(400).json({ success: false, message: "Email already exists." });
-        }
-
-        // Create the new user
-        await admin.auth().createUser({
-            email,
-            password,
-        });
 
         const allowedFields = [
             "avatar", "first_name", "last_name", "birth_date", "email", "mobile_number",
-            "region", "province", "municipality", "barangay", "zip_code", "role",
-            "password", "confirm_password", "hired_date", "team", "status",
+            "region", "province", "city", "barangay", "zip_code", "role", "team", "status",
             "is_deleted", "is_verified", "gender", "address1", "address2",
-            "nationality", "push_notification", "on_duty"
+            "nationality", "push_notification", "on_duty", "manage_store", "manage_account", "fcm_token"
         ];
 
         const updatedData = {};
@@ -238,7 +234,6 @@ const updateMyProfile = async (req, res) => {
 
             if (typeof value === "string" && key !== "email") value = value.toLowerCase();
             if (key === "birth_date") value = dateToTimeStamp(value);
-            if (key === "hired_date") value = dateToTimeStamp(value);
 
             const oldValue = userDoc.data()[key];
             if (value !== undefined && value !== oldValue) {
@@ -257,7 +252,7 @@ const updateMyProfile = async (req, res) => {
 
         const identityFields = [
             "first_name", "last_name", "email", "mobile_number", "region",
-            "province", "municipality", "barangay", "zip_code", "role",
+            "province", "city", "barangay", "zip_code", "role",
             "gender", "address1", "address2", "nationality"
         ];
 
@@ -273,7 +268,7 @@ const updateMyProfile = async (req, res) => {
                 user.mobile_number,
                 user.region,
                 user.province,
-                user.municipality,
+                user.city,
                 user.barangay,
                 user.zip_code,
                 user.role,
@@ -284,7 +279,7 @@ const updateMyProfile = async (req, res) => {
             ];
 
             const processedTags = rawTags
-                .map(val => typeof val === 'string' ? val.toLowerCase().trim().split(/\s+/) : [val])
+                .map(val => typeof val === 'string' ? safeSplit(val.toLowerCase()) : [val])
                 .flat().filter(Boolean);
 
             await userRef.update({
@@ -347,10 +342,6 @@ const loginUser = async (req, res) => {
         const userDoc = snapshot.docs[0];
         const userData = userDoc.data();
 
-        if (userData.status === "inactive") {
-            return res.status(400).json({ success: false, message: "User inactive." });
-        }
-
         if(userData.is_deleted === true){
             return res.status(400).json({ success: false, message: "User not found." });
         }
@@ -389,18 +380,6 @@ const loginUser = async (req, res) => {
         const teamData = teamSnapshot.data();
         const teamName = teamData.team_name || null;
 
-        // const currentTime = Timestamp.now();
-        // const dateObj = currentTime.toDate();
-
-        // const formattedTime = dateObj.toLocaleString('en-US', {
-        //     year: 'numeric',
-        //     month: 'long',
-        //     day: 'numeric',
-        //     hour: 'numeric',
-        //     minute: '2-digit',
-        //     hour12: true,
-        // });
-
         await logUserActivity({ 
             heading: "signed In",
             currentUserId: getId, 
@@ -421,24 +400,6 @@ const loginUser = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Error verifying ID token:", error);
-
-        const isNetworkError = [
-            'ECONNRESET',
-            'ENOTFOUND',
-            'ETIMEDOUT',
-            'EAI_AGAIN',
-            'UNAVAILABLE'
-        ].includes(error.code);
-
-        if (isNetworkError) {
-            return res.status(503).json({
-                success: false,
-                message: "Service unavailable. Please check your internet connection and try again.",
-                error: error.message,
-            });
-        }
-
         return res.status(401).json({
             success: false,
             message: "Unauthorized",
@@ -453,6 +414,8 @@ const userAttendance = async(req, res) => {
     try {
         const { currentUserId } = req.params;
         const { on_duty } = req.body;
+
+        const userRef = db.collection('users').doc(currentUserId);
 
         if (typeof on_duty !== 'boolean') {
             return res.status(400).json({
@@ -477,14 +440,15 @@ const userAttendance = async(req, res) => {
             });
         }
 
-        if (phHour > 11 || (phHour === 11 && phMinute > 0)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Cannot attendance you are late',
-            });
-        }
+        // if (phHour > 11 || (phHour === 11 && phMinute > 0)) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: 'Cannot attendance you are late',
+        //     });
+        // }
 
         const attendanceRef = db.collection('attendance').doc();
+
         const attendanceData = {
             id: currentUserId,
             on_duty,
@@ -492,6 +456,11 @@ const userAttendance = async(req, res) => {
         }
 
         await attendanceRef.set(attendanceData);
+
+        await userRef.update({
+            attendance: on_duty ? "on_duty" : "off_duty",
+            attendance_date: Timestamp.now(),
+        });
 
         return res.status(200).json({
             success: true,

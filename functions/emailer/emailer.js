@@ -85,7 +85,7 @@ const sendWelcomeEmail = async (to, name, role, id) => {
         <body>
           <div class="container">
             <div class="logo">
-              <img src="https://praetorianintel.com/public/images/pages/alt-logo.png" alt="StoreWatch Logo" />
+              <img src="https://praetorianintel.com/public/images/pages/logo.png" alt="StoreWatch Logo" />
             </div>
             <h1>StoreWatch</h1>
             <h2>Verify Your Email</h2>
@@ -190,7 +190,7 @@ const successVerify = async(to, name) => {
         <body>
           <div class="container">
             <div class="logo">
-              <img src="https://praetorianintel.com/public/images/pages/alt-logo.png" alt="StoreWatch Logo" />
+              <img src="https://praetorianintel.com/public/images/pages/logo.png" alt="StoreWatch Logo" />
             </div>
             <h1>StoreWatch</h1>
             <h2>Your StoreWatch Account is Ready</h2>

@@ -1,14 +1,14 @@
 const { firestore } = require("firebase-admin");
 const { Timestamp } = require("firebase-admin/firestore");
 const collection = require("../utils/utils");
-const { logUserActivity } = require("../utils/functions");
+const { logUserActivity, sendAdminNotifications, getUserNameById, getStoreNameById, capitalizeFirstLetter } = require("../utils/functions");
 
 const db = firestore();
 
 const manageInventory = async (req, res) => {
     try {
-        const { currentUserId, storeId } = req.params;
-        const products = req.body; 
+        const { storeId, currentUserId } = req.params;
+        const products = req.body;
 
         if (!Array.isArray(products)) {
             return res.status(400).json({ success: false, message: "Request body must be an array of products." });
@@ -16,112 +16,99 @@ const manageInventory = async (req, res) => {
 
         const batch = db.batch();
 
-        products.forEach((item) => {
+        for (const item of products) {
+            const productId = item.products;
+
+            if (!productId) {
+                return res.status(400).json({ success: false, message: "Each item must contain a valid 'products' field." });
+            }
+
+            const productDoc = await db.collection('products').doc(productId).get();
+
+            if (!productDoc.exists) {
+                return res.status(400).json({ success: false, message: `Product ID ${productId} does not exist.` });
+            }
+
             const inventoryRef = db.collection('stores').doc(storeId).collection('inventory').doc();
+
             batch.set(inventoryRef, {
                 id: inventoryRef.id,
-                product: item.products, 
+                product: productId,
                 created_at: Timestamp.now(),
             });
-        });
+        }
 
         await batch.commit();
 
         await logUserActivity({
-            heading: "inventory",   
+            heading: "inventory",
             currentUserId,
-            activity: 'New inventory items have been created'
+            activity: 'new inventory items have been created'
+        });
+
+        const currentUserName = await getUserNameById(currentUserId);
+        const storeName = await getStoreNameById(storeId);
+
+        await sendAdminNotifications({
+            fcmMessage: `${capitalizeFirstLetter(currentUserName)} manage an inventory to store named ${capitalizeFirstLetter(storeName)}`,
+            message: `${capitalizeFirstLetter(currentUserName)} added an inventory to ${capitalizeFirstLetter(storeName)}`,
+            type: 'inventory'
         });
 
         return res.status(200).json({ success: true, message: "Inventory successfully created." });
     } catch (error) {
-        return res.status(500).json({ success: false, message: "Failed to add inventory." });
+        console.error("manageInventory error:", error); // Log the actual error
+        return res.status(500).json({ success: false, message: "Failed to add inventory.", error });
     }
 };
 
-const addStock = async(req, res) => {
+
+//!===================================================================================================================================================
+
+const updateInventory = async (req, res) => {
     try {
         const { storeId, inventoryId, currentUserId } = req.params;
-        const { unit, quantity } = req.body;
+        const { unit, quantity, treshold } = req.body;
 
         const inventoryRef = db.collection('stores').doc(storeId).collection('inventory').doc(inventoryId);
 
-        await inventoryRef.update({
-            unit,
-            quantity,
-        });
+        const updateData = {};
+
+        if (unit !== undefined) updateData.unit = unit;
+        if (quantity !== undefined) updateData.quantity = quantity;
+        if (treshold !== undefined) updateData.treshold = treshold;
+
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({ success: false, message: "No valid fields provided to update." });
+        }
+
+        await inventoryRef.update(updateData);
 
         await logUserActivity({
-            heading: "inventory",   
+            heading: "inventory",
             currentUserId,
-            activity: 'New inventory items have been created'
+            activity: 'Inventory item has been updated'
         });
 
-        return res.status(200).json({ success: true, message: "Successfully added a stock" });
+        const currentUserName = await getUserNameById(currentUserId);
+        const storeName = await getStoreNameById(storeId);
+
+        await sendAdminNotifications({
+            fcmMessage: `${capitalizeFirstLetter(currentUserName)} manage an inventory to store named ${capitalizeFirstLetter(storeName)}`,
+            message: `${capitalizeFirstLetter(currentUserName)} added an inventory to ${capitalizeFirstLetter(storeName)}`,
+            type: 'inventory'
+        });
+
+
+        return res.status(200).json({ success: true, message: "Successfully updated inventory." });
+
     } catch (error) {
-        return res.status(500).json({ success: false, message: "Failed to update" });
+        console.error("updateInventory error:", error);
+        return res.status(500).json({ success: false, message: "Failed to update inventory." });
     }
-}
+};
 
-
-// const updateStock = async (req, res) => {
-//     try {
-//         const { store_id, inventory_id } = req.params; 
-//         const { unit, quantity } = req.body;
-
-//         if (!store_id || !inventory_id || !unit || !quantity) {
-//             return res.status(400).json({ success: false, message: "Invalid data" });
-//         }
-
-//         const inventoryRef = db.collection(collection.collections.storesCollection).doc(store_id).collection(collection.subCollections.inventoryCollection).doc(inventory_id);
-        
-//         const doc = await inventoryRef.get();
-//         if (!doc.exists) {
-//             return res.status(404).json({ success: false, message: "Inventory id not found" });
-//         }
-            
-//         const inventoryupdated_ata = {
-//             unit: unit,
-//             quantity: quantity,
-//         }
-
-//         await inventoryRef.update(inventoryupdated_ata)
-
-//         return res.status(200).json({ success: true, message: "Inventory updated successfully" });
-//     } catch (error) {
-//         console.error("Error updating inventory", error);
-//         return res.status(500).json({ success: false, message: "Failed to update inventory" });
-//     }
-// };
-
-// const updateTreshold = async (req, res) => {
-//     try {
-//         const { store_id, inventory_id } = req.params; 
-//         const { treshold } = req.body;
-
-//         if (!store_id || !inventory_id || !treshold === undefined) {
-//             return res.status(400).json({ success: false, message: "Invalid data" });
-//         }
-
-//         const inventoryRef = db.collection(collection.collections.storesCollection).doc(store_id).collection(collection.subCollections.inventoryCollection).doc(inventory_id);
-        
-//         const doc = await inventoryRef.get();
-//         if (!doc.exists) {
-//             return res.status(404).json({ success: false, message: "Inventory id not found" });
-//         }
-
-//         const updatedTreshold = {
-//             treshold,
-//         }
-
-//         await inventoryRef.update(updatedTreshold)
-
-//         return res.status(200).json({ success: true, message: "Update Treshold Success" });
-//     } catch (error) {
-//         console.error("Error updating inventory", error);
-//         return res.status(500).json({ success: false, message: "Failed to update inventory" });
-//     }
-// };
+//!===================================================================================================================================================
 
 // const deleteInventory = async (req, res) => {
 //     try {
@@ -147,4 +134,4 @@ const addStock = async(req, res) => {
 //     }
 // };
 
-module.exports = { manageInventory, addStock };
+module.exports = { manageInventory, updateInventory };
