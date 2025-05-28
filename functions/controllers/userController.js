@@ -41,6 +41,7 @@ const addUser = async (req, res) => {
             address2,
             nationality,
             push_notification, 
+            attendance,
             ...otherData
         } = req.body;
 
@@ -108,6 +109,8 @@ const addUser = async (req, res) => {
             address2: address2.toLowerCase(),
             nationality: nationality.toLowerCase(),
             push_notification: false,
+            attendance: "off duty",
+            attendance_date: Timestamp.now(),
             ...otherData,
             created_at: Timestamp.now(),
         };
@@ -135,9 +138,19 @@ const addUser = async (req, res) => {
 
         const currentUserName = await getUserNameById(currentUserId);
 
+        const getGender = (gender) => {
+            if (gender === "male") {
+                return "him";
+            } else {
+                return "her";
+            }
+        };
+
         await sendAdminNotifications({
+            heading: "New Account Created",
             fcmMessage: `${capitalizeFirstLetter(currentUserName)} created an account named ${capitalizeFirstLetter(first_name)}`,
-            message: `${capitalizeFirstLetter(currentUserName)} created an account for ${capitalizeFirstLetter(first_name)} with the role of ${capitalizeFirstLetter(role)}`,
+            title: `${capitalizeFirstLetter(currentUserName)} created a new ${capitalizeFirstLetter(role)} account`,
+            message: `${capitalizeFirstLetter(currentUserName)} just created an account for ${capitalizeFirstLetter(first_name)} as promodiser. Make sure to welcome ${getGender(gender)} and verify that permissions are set up properly.`,
             type: 'user'
         })
 
@@ -440,12 +453,12 @@ const userAttendance = async(req, res) => {
             });
         }
 
-        // if (phHour > 11 || (phHour === 11 && phMinute > 0)) {
-        //     return res.status(400).json({
-        //         success: false,
-        //         message: 'Cannot attendance you are late',
-        //     });
-        // }
+        if (phHour > 11 || (phHour === 11 && phMinute > 0)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot attendance you are late',
+            });
+        }
 
         const attendanceRef = db.collection('attendance').doc();
 

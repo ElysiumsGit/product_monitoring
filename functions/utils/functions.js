@@ -4,7 +4,7 @@ const admin = require('firebase-admin');
 
 const db = firestore();
 
-const sendAdminNotifications = async ({fcmMessage = "FCM Message", message = "Message", type}) => {
+const sendAdminNotifications = async ({heading = "New Account Created", title= "Rico created a new Promodiser Account", fcmMessage = "FCM Message", message = "Message", type}) => {
     const adminUsersSnapshot = await db.collection("users").where("role", "==", "admin").get();
     const notificationPromises = [];
 
@@ -18,6 +18,8 @@ const sendAdminNotifications = async ({fcmMessage = "FCM Message", message = "Me
 
             const notificationData = {
                 id: notificationRef.id,
+                heading,
+                title,
                 message,
                 created_at: Timestamp.now(),
                 is_read: false,
@@ -232,12 +234,11 @@ const incrementNotification = async (userId) => {
 
 
 const safeSplit = (input) => {
-  const words = input.trim().split(/\s+/);
-  const hasShortWord = words.some(word => word.length === 1);
-
-  return hasShortWord ? [input.trim()] : words;
+  return input
+    .trim()
+    .split(/\s+/)
+    .filter(word => word.length > 1);
 };
-
 
 module.exports = { 
     sendAdminNotifications, 
@@ -253,5 +254,4 @@ module.exports = {
     capitalizeFirstLetter,
     incrementNotification,
     safeSplit,
-    // generateSearchTags
 }
