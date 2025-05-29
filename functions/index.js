@@ -19,6 +19,8 @@ const verifyRoute = require("./routes/verifyRoute");
 const forgotPasswordRoute = require("./routes/forgotPasswordRoute");
 const authPassword = require("./routes/authPasswordRoute");
 const inventoryRoute = require("./routes/inventoryRoute");
+const attendanceRoute = require("./routes/attendanceRoute");
+const statusRoute = require("./routes/statusRoute");
 // const scheduleRoute = require("./routes/scheduleRoute");
 // const automationRoute = require("./routes/automationRoute");
 const { renderErrorPage } = require('./renderHtml/error');
@@ -39,6 +41,8 @@ app.use("/verify", verifyRoute);
 app.use("/forgotPassword", forgotPasswordRoute);
 app.use("/auth", authPassword);
 app.use("/inventory", inventoryRoute);
+app.use("/attendance", attendanceRoute);
+app.use("/status", statusRoute);
 // app.use("/scheduleRoute", scheduleRoute);
 // app.use("/", automationRoute);
 

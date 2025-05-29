@@ -31,7 +31,11 @@ const verifyUser = async(req, res) => {
         return res.send('User already verified.');
       }
   
-      await userRef.update({ is_verified: true });
+      await userRef.update({ 
+        is_verified: true, 
+        status: "active" 
+      });
+      
       await successVerify(getEmail, getUserName);
       res.send('Account successfully verified!');
 

@@ -240,6 +240,14 @@ const safeSplit = (input) => {
     .filter(word => word.length > 1);
 };
 
+const getGender = (gender) => {
+    if (gender === "male") {
+        return "him";
+    } else {
+        return "her";
+    }
+};
+
 module.exports = { 
     sendAdminNotifications, 
     logUserActivity, 
@@ -254,4 +262,5 @@ module.exports = {
     capitalizeFirstLetter,
     incrementNotification,
     safeSplit,
+    getGender
 }

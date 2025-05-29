@@ -2,12 +2,11 @@ const { firestore } = require("firebase-admin");
 const { Timestamp } = require("firebase-admin/firestore");
 const admin = require("firebase-admin");
 const { users, activities, notifications, dateToTimeStamp } = require("../utils/utils");
-const { sendAdminNotifications, logUserActivity, getUserNameById, getUserRoleById, capitalizeFirstLetter, incrementNotification, safeSplit } = require("../utils/functions");
+const { sendAdminNotifications, logUserActivity, getUserNameById, getUserRoleById, capitalizeFirstLetter, incrementNotification, safeSplit, getGender } = require("../utils/functions");
 const { sendWelcomeEmail, sendVerificationCode } = require("../emailer/emailer");
-// const multer = require('multer');
-// const upload = multer({ storage: multer.memoryStorage() });
 
 const db = firestore();
+const zeroTimestamp = Timestamp.fromMillis(0);
 
 //!=============================================================== A D D  U S E R ==========================================================================
 
@@ -42,6 +41,7 @@ const addUser = async (req, res) => {
             nationality,
             push_notification, 
             attendance,
+            last_signed_in,
             ...otherData
         } = req.body;
 
@@ -109,8 +109,9 @@ const addUser = async (req, res) => {
             address2: address2.toLowerCase(),
             nationality: nationality.toLowerCase(),
             push_notification: false,
-            attendance: "off duty",
+            attendance: "",
             attendance_date: Timestamp.now(),
+            last_signed_in: zeroTimestamp,
             ...otherData,
             created_at: Timestamp.now(),
         };
@@ -137,14 +138,6 @@ const addUser = async (req, res) => {
         });
 
         const currentUserName = await getUserNameById(currentUserId);
-
-        const getGender = (gender) => {
-            if (gender === "male") {
-                return "him";
-            } else {
-                return "her";
-            }
-        };
 
         await sendAdminNotifications({
             heading: "New Account Created",
@@ -187,7 +180,7 @@ const addUser = async (req, res) => {
     }
 };
 
-//!=============================================================== U P D A T E  U S E R =========================================================================
+//!=============================================================== U P D A T E  P R O F I L E =========================================================================
 
 const updateMyProfile = async (req, res) => {
     try {
@@ -229,7 +222,7 @@ const updateMyProfile = async (req, res) => {
         }
 
         const allowedFields = [
-            "avatar", "first_name", "last_name", "birth_date", "email", "mobile_number",
+            "avatar", "first_name", "middle_name", "last_name", "birth_date", "email", "mobile_number",
             "region", "province", "city", "barangay", "zip_code", "role", "team", "status",
             "is_deleted", "is_verified", "gender", "address1", "address2",
             "nationality", "push_notification", "on_duty", "manage_store", "manage_account", "fcm_token"
@@ -329,6 +322,182 @@ const updateMyProfile = async (req, res) => {
     }
 };
 
+
+//!=============================================================== U P D A T E  U S E R =========================================================================
+
+const updateUser = async (req, res) => {
+    try {
+        const { currentUserId, targetId } = req.params;
+        const updates = req.body;
+
+        const userRef = db.collection('users').doc(targetId);
+        const userDoc = await userRef.get();
+
+        if (!userDoc.exists) {
+            return res.status(404).json({ success: false, message: "User not found." });
+        }
+
+        const allowedFields = [
+            "avatar", "first_name", "middle_name", "last_name", "birth_date", "mobile_number",
+            "street", "region", "province", "city", "barangay", "zip_code", "role"
+        ];
+
+        const updatedData = {};
+        let hasOtherChanges = false;
+
+        for (const key of Object.keys(updates)) {
+            if (!allowedFields.includes(key)) {
+                return res.status(400).json({ success: false, message: `Updating "${key}" is not allowed.` });
+            }
+
+            let value = updates[key];
+            if (typeof value === "string" && key !== "email") value = value.toLowerCase();
+            if (key === "birth_date") value = dateToTimeStamp(value);
+
+            const oldValue = userDoc.data()[key];
+            if (value !== undefined && value !== oldValue) {
+                updatedData[key] = value;
+                if (key !== "push_notification" && key !== "on_duty") {
+                    hasOtherChanges = true;
+                }
+            }
+        }
+
+        if (Object.keys(updatedData).length === 0) {
+            return res.status(200).json({ success: true, message: "No changes detected." });
+        }
+
+        await userRef.update(updatedData);
+
+        // Update search_tags if identity fields changed
+        const identityFields = [
+            "first_name", "last_name", "mobile_number", "region",
+            "province", "city", "barangay", "zip_code"
+        ];
+
+        const shouldUpdateTags = identityFields.some(field => updatedData.hasOwnProperty(field));
+
+        if (shouldUpdateTags) {
+            const user = { ...userDoc.data(), ...updatedData };
+
+            const rawTags = [
+                user.first_name,
+                user.last_name,
+                user.mobile_number,
+                user.region,
+                user.province,
+                user.city,
+                user.barangay,
+                user.zip_code,
+            ];
+
+            const processedTags = rawTags
+                .map(val => typeof val === 'string' ? safeSplit(val.toLowerCase()) : [val])
+                .flat().filter(Boolean);
+
+            await userRef.update({ search_tags: processedTags });
+        }
+
+        // Notify admins
+        const currentUserName = await getUserNameById(currentUserId);
+        const updateUserName = await getUserNameById(targetId);
+
+        await sendAdminNotifications({
+            heading: "Account Has Updated",
+            fcmMessage: `${capitalizeFirstLetter(currentUserName)} updated information for ${capitalizeFirstLetter(updateUserName)}`,
+            title: `${capitalizeFirstLetter(currentUserName)} updated an account`,
+            message: `${capitalizeFirstLetter(currentUserName)} just updated an account for ${capitalizeFirstLetter(updateUserName)}`,
+            type: 'user'
+        });
+
+        // Log activity
+        if (hasOtherChanges) {
+            await logUserActivity({
+                heading: "update User",
+                currentUserId,
+                activity: `Updated user ${updateUserName}.`
+            });
+        } else if (Object.keys(updatedData).length === 1 && updatedData.hasOwnProperty("push_notification")) {
+            return res.status(200).json({ success: true, message: "Push notification updated successfully." });
+        } else if (Object.keys(updatedData).length === 1 && updatedData.hasOwnProperty("on_duty")) {
+            return res.status(200).json({ success: true, message: "User successfully chose attendance." });
+        } else {
+            await logUserActivity({
+                heading: "account",
+                currentUserId,
+                activity: "Account has been updated."
+            });
+        }
+
+        return res.status(200).json({ success: true, message: "User updated successfully." });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error.",
+            error: error.message
+        });
+    }
+};
+
+
+// const updateUser = async(req, res) => {
+//     try {
+//         const { currentUserId, targetId } = req.params;
+//         const { 
+//             first_name,
+//             last_name,
+//             birth_date,
+//             mobile_number,
+//             street_address,
+//             province,
+//             city,
+//             barangay,
+//             zip_code
+//         } = req.body;
+
+//         const userRef = db.collection('users').doc(targetId);
+//         const updatedData = {
+//             first_name,
+//             middle_name: "",
+//             last_name,
+//             birth_date,
+//             mobile_number,
+//             street_address,
+//             province,
+//             city,
+//             barangay,
+//             zip_code
+//         }
+        
+//         await userRef.update(updatedData);
+
+//         const currentUserName = await getUserNameById(currentUserId);
+//         const updateUserName = await getUserNameById(targetId);
+
+//         await sendAdminNotifications({
+//             heading: "Account Has Updated",
+//             fcmMessage: `${capitalizeFirstLetter(currentUserName)} updated an information to ${capitalizeFirstLetter(updateUserName)}`,
+//             title: `${capitalizeFirstLetter(currentUserName)} update a `,
+//             message: `${capitalizeFirstLetter(currentUserName)} just update an account for ${capitalizeFirstLetter(updateUserName)}`,
+//             type: 'user'
+//         });
+
+//         await logUserActivity({
+//             heading: "account",
+//             currentUserId,
+//             activity: "Account has been updated."
+//         });
+
+//     } catch (error) {
+//         return res.status(500).json({
+//             success: false,
+//             message: "Internal server error.",
+//             error: error.message
+//         });
+//     }
+// }
+
 //!=============================================================== L O G I N =========================================================================
 
 const loginUser = async (req, res) => {
@@ -401,6 +570,7 @@ const loginUser = async (req, res) => {
 
         await userRef.update({
            fcm_token: fcmToken,
+           last_signed_in: Timestamp.now(),
         });
 
         return res.status(200).json({
@@ -423,69 +593,5 @@ const loginUser = async (req, res) => {
 
 //!=============================================================== L O G I N =========================================================================
 
-const userAttendance = async(req, res) => {
-    try {
-        const { currentUserId } = req.params;
-        const { on_duty } = req.body;
 
-        const userRef = db.collection('users').doc(currentUserId);
-
-        if (typeof on_duty !== 'boolean') {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid input. `currentUserId` and `on_duty` (boolean) are required.',
-            });
-        }
-
-        const now = new Date();
-
-        const phTime = new Date(
-            now.toLocaleString('en-US', { timeZone: 'Asia/Manila' })
-        );
-
-        const phHour = phTime.getHours();
-        const phMinute = phTime.getMinutes();
-
-        if (phHour < 8) {
-            return res.status(400).json({
-                success: false,
-                message: 'Too early to attendance',
-            });
-        }
-
-        if (phHour > 11 || (phHour === 11 && phMinute > 0)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Cannot attendance you are late',
-            });
-        }
-
-        const attendanceRef = db.collection('attendance').doc();
-
-        const attendanceData = {
-            id: currentUserId,
-            on_duty,
-            created_at: Timestamp.now()
-        }
-
-        await attendanceRef.set(attendanceData);
-
-        await userRef.update({
-            attendance: on_duty ? "on_duty" : "off_duty",
-            attendance_date: Timestamp.now(),
-        });
-
-        return res.status(200).json({
-            success: true,
-            message: "Attendance success"
-        });
-
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: 'Attendance failed',
-        });
-    }
-}
-
-module.exports = { addUser, updateMyProfile, loginUser, userAttendance };
+module.exports = { addUser, updateMyProfile, updateUser, loginUser };
