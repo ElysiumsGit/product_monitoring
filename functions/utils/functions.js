@@ -60,7 +60,7 @@ const sendAdminNotifications = async ({heading = "New Account Created", title= "
 
 const logUserActivity = async ({ currentUserId, activity, heading = 'Input a heading' }) => {
     const activityRef = db.collection("users").doc(currentUserId).collection("activities").doc();
-    const stopWords = new Set(['in', 'been', 'has']);
+    const stopWords = new Set(['in', 'been', 'has', 'a']);
 
     const search_tags = activity
         .toLowerCase()

@@ -1,5 +1,5 @@
 const { firestore } = require("firebase-admin");
-const { Timestamp } = require("firebase-admin/firestore");
+const { Timestamp, FieldValue } = require("firebase-admin/firestore");
 const admin = require("firebase-admin");
 const { users, activities, notifications, dateToTimeStamp } = require("../utils/utils");
 const { sendAdminNotifications, logUserActivity, getUserNameById, getUserRoleById, capitalizeFirstLetter, incrementNotification, safeSplit, getGender } = require("../utils/functions");
@@ -29,6 +29,7 @@ const addUser = async (req, res) => {
             role, 
             manage_store,
             manage_account,
+            manage_product,
             password, 
             confirm_password, 
             team,
@@ -82,6 +83,7 @@ const addUser = async (req, res) => {
         const getUserUID = getUID.uid;
         const userRef = db.collection('users').doc(); 
         const userId = userRef.id;
+        const getRole = await getUserRoleById(userId);
 
         const userData = {
             avatar: "",
@@ -100,6 +102,7 @@ const addUser = async (req, res) => {
             role: role.toLowerCase(), 
             manage_store,
             manage_account,
+            manage_product: getRole === "promodiser" ? false : manage_product,
             team: "",
             status: "inactive",
             is_deleted: false,
@@ -202,7 +205,6 @@ const updateMyProfile = async (req, res) => {
         const { email, password } = updates;
 
         if (email && email !== currentEmail) {
-            // Check if email already exists in Firebase Auth
             try {
                 const userRecord = await admin.auth().getUserByEmail(email);
                 if (userRecord && userRecord.uid !== currentUserId) {
@@ -213,7 +215,6 @@ const updateMyProfile = async (req, res) => {
                     console.error(error);
                     return res.status(500).json({ success: false, message: error.message });
                 }
-                // If user-not-found, it's safe to proceed
             }
             await admin.auth().createUser({
                 email,
@@ -238,7 +239,7 @@ const updateMyProfile = async (req, res) => {
 
             let value = updates[key];
 
-            if (typeof value === "string" && key !== "email") value = value.toLowerCase();
+            if (typeof value === "string" && key !== "email") value = value;
             if (key === "birth_date") value = dateToTimeStamp(value);
 
             const oldValue = userDoc.data()[key];
@@ -322,7 +323,6 @@ const updateMyProfile = async (req, res) => {
     }
 };
 
-
 //!=============================================================== U P D A T E  U S E R =========================================================================
 
 const updateUser = async (req, res) => {
@@ -339,7 +339,7 @@ const updateUser = async (req, res) => {
 
         const allowedFields = [
             "avatar", "first_name", "middle_name", "last_name", "birth_date", "mobile_number",
-            "street", "region", "province", "city", "barangay", "zip_code", "role"
+            "street", "region", "province", "city", "barangay", "zip_code", "role", "status"
         ];
 
         const updatedData = {};
@@ -351,7 +351,7 @@ const updateUser = async (req, res) => {
             }
 
             let value = updates[key];
-            if (typeof value === "string" && key !== "email") value = value.toLowerCase();
+            if (typeof value === "string" && key !== "email") value = value;
             if (key === "birth_date") value = dateToTimeStamp(value);
 
             const oldValue = userDoc.data()[key];
@@ -398,7 +398,6 @@ const updateUser = async (req, res) => {
             await userRef.update({ search_tags: processedTags });
         }
 
-        // Notify admins
         const currentUserName = await getUserNameById(currentUserId);
         const updateUserName = await getUserNameById(targetId);
 
@@ -410,7 +409,6 @@ const updateUser = async (req, res) => {
             type: 'user'
         });
 
-        // Log activity
         if (hasOtherChanges) {
             await logUserActivity({
                 heading: "update User",
@@ -591,7 +589,50 @@ const loginUser = async (req, res) => {
     }
 };
 
-//!=============================================================== L O G I N =========================================================================
+//!=============================================================== D E L E T E   U S E R =========================================================================
 
+const deleteUser = async(req, res) => {
+    try {
+        const { currentUserId, targetId } = req.params;
+        const { is_deleted } = req.body;
 
-module.exports = { addUser, updateMyProfile, updateUser, loginUser };
+        const userRef = db.collection("users").doc(targetId);
+
+        const userData = {
+            is_deleted,
+            deleted_at: is_deleted ? Timestamp.now() : FieldValue.delete(),
+        }
+
+        await userRef.update(userData);
+
+        const currentUserName = await getUserNameById(currentUserId);
+        const updateUserName = await getUserNameById(targetId);
+
+        await sendAdminNotifications({
+            heading: "Account Has Deleted",
+            fcmMessage: `${capitalizeFirstLetter(currentUserName)} deleted an account named ${capitalizeFirstLetter(updateUserName)}`,
+            title: `${capitalizeFirstLetter(currentUserName)} delete an account`,
+            message: `${capitalizeFirstLetter(currentUserName)} just deleted an account named ${capitalizeFirstLetter(updateUserName)}`,
+            type: 'user'
+        });
+
+        await logUserActivity({ 
+            heading: "signed In",
+            currentUserId: currentUserId, 
+            activity: 'account signed in successfully' 
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Login successful",
+        });
+    } catch (error) {
+        return res.status(401).json({
+            success: false,
+            message: "Unauthorized",
+            error: error.message,
+        });   
+    }
+}
+
+module.exports = { addUser, updateMyProfile, updateUser, loginUser, deleteUser };

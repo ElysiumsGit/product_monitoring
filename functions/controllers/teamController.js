@@ -138,7 +138,7 @@ const updateTeam = async (req, res) => {
         const removedUserIds = currentUserIdsInTeam.filter(uid => !newTeamSet.has(uid));
         for (const userId of removedUserIds) {
             await db.collection('users').doc(userId).update({
-                team: FieldValue.delete(),
+                team: "",
             });
 
             const notificationRef = db.collection('users').doc(userId).collection('notifications').doc();
@@ -215,7 +215,7 @@ const deleteTeam = async (req, res) => {
             const notifRef = userRef.collection(notifications).doc();
 
             await userRef.update({
-                team: firestore.FieldValue.delete(),
+                team: "",
             });
 
             await notifRef.set({

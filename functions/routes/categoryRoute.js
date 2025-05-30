@@ -4,7 +4,7 @@ const { addCategory, updateCategory, deleteCategory } = require("../controllers/
 const router = express.Router();
 
 router.post("/add/:currentUserId", addCategory);
-router.put("/update/:categoryId/:currentUserId", updateCategory);
-router.put("/delete/:categoryId/:currentUserId", deleteCategory);
+router.put("/update/:currentUserId/:targetId", updateCategory);
+router.put("/delete/:currentUserId/:targetId", deleteCategory);
 
 module.exports = router;

@@ -1,7 +1,6 @@
 const { firestore } = require("firebase-admin");
-const { collections } = require("../utils/utils");
-const { sendAdminNotifications, getUserNameById, getUserRoleById, logUserActivity, getCategoryById } = require("../utils/functions");
-const { Timestamp } = require("firebase-admin/firestore");
+const { sendAdminNotifications, getUserNameById, getUserRoleById, logUserActivity, getCategoryById, capitalizeFirstLetter } = require("../utils/functions");
+const { Timestamp, FieldValue } = require("firebase-admin/firestore");
 
 const db = firestore();
 
@@ -17,29 +16,33 @@ const addCategory = async(req, res) => {
             return res.status(400).json({ success: false, message: "Category is required" });
         }
 
-        categoryRef = db.collection('categories').doc();
+        const categoryRef = db.collection('categories').doc();
+        const counterRef = db.collection('counter').doc('counter_id');
         const categoryId = categoryRef.id;
 
         const data = {
-            id: categoryId,
-            category_name,
+            category_id: categoryId,
+            category_name: category_name.toLowerCase().trim(),
             is_deleted: false,
             created_at: Timestamp.now(), 
         }
 
+        const counterData = {
+            categories: FieldValue.increment(1),
+        }
+
+        await counterRef.set(counterData, { merge: true });
         await categoryRef.set(data);
 
-        const getUserName = await getUserNameById(currentUserId);
-        const getRole = await getUserRoleById(currentUserId);
+        const currentUserName = await getUserNameById(currentUserId);
 
-        if(getRole === 'agent'){
-            await sendAdminNotifications({
-                fcmMessage: "You have one notification in category",
-                message: `${getUserName} has been added a category in product named ${category_name}`,
-                type: 'category'
-            })
-                
-        }
+        await sendAdminNotifications({
+            heading: "New Category Created",
+            fcmMessage: `${capitalizeFirstLetter(currentUserName)} created a category named ${capitalizeFirstLetter(category_name)}`,
+            title: `${capitalizeFirstLetter(currentUserName)} created a category named ${capitalizeFirstLetter(category_name)}`,
+            message: `${capitalizeFirstLetter(currentUserName)} just created a category named ${capitalizeFirstLetter(category_name)}`,
+            type: 'category'
+        });
 
         await logUserActivity({ 
             heading: "add category",
@@ -50,22 +53,22 @@ const addCategory = async(req, res) => {
         return res.status(200).json({ success: true, message: "Category Successfully Added" });
     } catch (error) {
         console.error("Error adding category", error);
-        return res.status(500).json({ success: false, message: "Failed to add category" });
+        return res.status(500).json({ success: false, message: "Failed to add category", error: error.message });
     }
 }
 
-//=============================================================== U P D A T E   C A T E G O R Y =========================================================================
+//!=============================================================== U P D A T E   C A T E G O R Y =========================================================================
 
 const updateCategory = async (req, res) => {
     try {
-        const { categoryId, currentUserId } = req.params;
+        const { currentUserId, targetId,  } = req.params;
         const { category_name } = req.body;
 
         if (!category_name) {
             return res.status(400).json({ success: false, message: "Category name is required" });
         }
 
-        const categoryRef = db.collection('categories').doc(categoryId);
+        const categoryRef = db.collection('categories').doc(targetId);
         const doc = await categoryRef.get();
 
         if (!doc.exists) {
@@ -73,24 +76,23 @@ const updateCategory = async (req, res) => {
         }
 
         await categoryRef.update({ 
-            category_name,
+            category_name: category_name.toLowerCase().trim(),
         });
 
-        const getUserName = await getUserNameById(currentUserId);
-        const getRole = await getUserRoleById(currentUserId);
+        const currentUserName = await getUserNameById(currentUserId);
 
-        if(getRole === 'agent'){
-            await sendAdminNotifications({
-                fcmMessage: "You have one notification in category",
-                message: `${getUserName} has been added a category in product named ${category_name}`,
-                type: 'category'
-            })
-        }
+        await sendAdminNotifications({
+            heading: "Category has updated",
+            fcmMessage: `${capitalizeFirstLetter(currentUserName)} updated a category named ${capitalizeFirstLetter(category_name)}`,
+            title: `${capitalizeFirstLetter(currentUserName)} updated a category named ${capitalizeFirstLetter(category_name)}`,
+            message: `${capitalizeFirstLetter(currentUserName)} just updated a category named ${capitalizeFirstLetter(category_name)}`,
+            type: 'category'
+        });
         
         await logUserActivity({ 
-            heading: "update group",
+            heading: "Update a Category",
             currentUserId: currentUserId, 
-            activity: 'you have successfully update a group' 
+            activity: 'you have successfully update a category' 
         });
 
         return res.status(200).json({ success: true, message: "Category successfully updated" });
@@ -104,9 +106,11 @@ const updateCategory = async (req, res) => {
 
 const deleteCategory = async (req, res) => {
     try {
-        const { categoryId, currentUserId } = req.params;
+        const { currentUserId, targetId,  } = req.params;
+        const { is_deleted } = req.body;
 
-        const categoryRef = db.collection('categories').doc(categoryId);
+        const categoryRef = db.collection('categories').doc(targetId);
+        const counterRef = db.collection('counter').doc('counter_id');
 
         const doc = await categoryRef.get();
 
@@ -115,21 +119,26 @@ const deleteCategory = async (req, res) => {
         }
 
         await categoryRef.update({
-            is_deleted: true,
-            deleted_at: Timestamp.now(),
+            is_deleted: is_deleted,
+            deleted_at: is_deleted ? Timestamp.now() : FieldValue.delete(),
         });
 
-        const getUserName = await getUserNameById(currentUserId);
-        const getRole = await getUserRoleById(currentUserId);
-        const getCategoryName = await getCategoryById(categoryId);
-
-        if(getRole === 'agent'){
-            await sendAdminNotifications({
-                fcmMessage: "You have one notification in category",
-                message: `${getUserName} has been added a category in product named ${category_name}`,
-                type: 'category'
-            })
+        const counterData = {
+            categories: FieldValue.increment(-1),
         }
+
+        await counterRef.set(counterData, { merge: true });
+
+        const currentUserName = await getUserNameById(currentUserId);
+        const category_name = await getCategoryById(targetId);
+
+        await sendAdminNotifications({
+            heading: "Category has Deleted",
+            fcmMessage: `${capitalizeFirstLetter(currentUserName)} deleted a category named ${capitalizeFirstLetter(category_name)}`,
+            title: `${capitalizeFirstLetter(currentUserName)} deleted a category named ${capitalizeFirstLetter(category_name)}`,
+            message: `${capitalizeFirstLetter(currentUserName)} just deleted a category named ${capitalizeFirstLetter(category_name)}`,
+            type: 'category'
+        });
 
         await logUserActivity({ 
             heading: "delete category",
