@@ -1,7 +1,6 @@
 const { firestore } = require("firebase-admin");
-const { Timestamp, FieldValue } = require("firebase-admin/firestore");
-const { team, users, activities, notifications } = require("../utils/utils");
-const { logUserActivity, incrementNotification } = require("../utils/functions");
+const { Timestamp } = require("firebase-admin/firestore");
+const { logUserActivity, incrementNotification, capitalizeFirstLetter, getUserNameById, sendAdminNotifications } = require("../utils/functions");
 
 const db = firestore();
 
@@ -14,7 +13,7 @@ const assignTeam = async(req, res) => {
             return res.status(400).json({ success: false, message: "Invalid Data" });
         }
 
-        const teamRef = db.collection(team).doc();
+        const teamRef = db.collection("team").doc();
         const teamId = teamRef.id;
 
         await teamRef.set({
@@ -24,19 +23,19 @@ const assignTeam = async(req, res) => {
         })
 
         for(const userIds of teams){
-            const userRef = db.collection(users).doc(userIds);
+            const userRef = db.collection("users").doc(userIds);
             const userDoc = await userRef.get();
 
             if(!userDoc.exists){
                 return res.status(400).json({ success: false, message: "Invalid User ID" });
             }
 
-            const notificationRef = userRef.collection(notifications).doc();
+            const notificationRef = userRef.collection("notifications").doc();
             const getNotificationId = notificationRef.id;
 
             await userRef.update({
                 team: teamId,
-            })
+            });
 
             await notificationRef.set({
                 id: getNotificationId,
@@ -47,6 +46,16 @@ const assignTeam = async(req, res) => {
 
             await incrementNotification(userIds);
         }
+
+        const currentUserName = await getUserNameById(currentUserId);
+
+        await sendAdminNotifications({
+            heading: "New Team Created",
+            fcmMessage: `${capitalizeFirstLetter(currentUserName)} created a team named ${capitalizeFirstLetter(team_name)}`,
+            title: `${capitalizeFirstLetter(currentUserName)} created a team ${capitalizeFirstLetter(team_name)}`,
+            message: `${capitalizeFirstLetter(currentUserName)} just created a team named ${capitalizeFirstLetter(team_name)}`,
+            type: 'team'
+        });
 
         await logUserActivity({ 
             heading: "team assignment",
@@ -60,10 +69,10 @@ const assignTeam = async(req, res) => {
         });
 
     } catch (error) {
-        console.error("Error updating team", error);
         return res.status(500).json({
             success: false,
-            message: "Failed to update team"
+            message: "Failed to update team",
+            error: error.message
         });
     }
 }
@@ -98,14 +107,14 @@ const assignTeam = async(req, res) => {
 //=============================================================== U P D A T E  T E A M =========================================================================
 const updateTeam = async (req, res) => {
     try {
-        const { teamId, currentUserId } = req.params;
+        const { currentUserId, targetId  } = req.params;
         const { team_name, teams } = req.body;
 
         if (!team_name || !Array.isArray(teams)) {
             return res.status(400).json({ success: false, message: "Invalid Data" });
         }
 
-        const teamDocRef = db.collection(team).doc(teamId);
+        const teamDocRef = db.collection("team").doc(targetId);
         const teamDoc = await teamDocRef.get();
         if (!teamDoc.exists) {
             return res.status(404).json({ success: false, message: "Team not found" });
@@ -117,7 +126,7 @@ const updateTeam = async (req, res) => {
             await teamDocRef.update({ name: team_name });
         }
         
-        const usersSnapshot = await db.collection('users').where('team', '==', teamId).get();
+        const usersSnapshot = await db.collection('users').where('team', '==', targetId).get();
         const currentUserIdsInTeam = usersSnapshot.docs.map(doc => doc.id);
         const newTeamSet = new Set(teams);
 
@@ -167,7 +176,7 @@ const updateTeam = async (req, res) => {
             }
 
             await userRef.update({
-                team: teamId,
+                team: targetId,
             });
         }
 
@@ -184,12 +193,13 @@ const updateTeam = async (req, res) => {
     }
 };
 
-//=============================================================== D E L E T E  T E A M =========================================================================
+//!=============================================================== D E L E T E  T E A M =========================================================================
+
 const deleteTeam = async (req, res) => {
     try {
-        const { teamId, currentUserId } = req.params;
+        const { currentUserId, targetId  } = req.params;
 
-        const teamRef = db.collection(team).doc(teamId);
+        const teamRef = db.collection("team").doc(targetId);
         const teamDoc = await teamRef.get();
 
         if (!teamDoc.exists) {
@@ -206,8 +216,8 @@ const deleteTeam = async (req, res) => {
         });
 
         const usersSnap = await db
-            .collection(users)
-            .where("team", "==", teamId)
+            .collection("users")
+            .where("team", "==", targetId)
             .get();
 
         const userUpdatePromises = usersSnap.docs.map(async (userDoc) => {

@@ -164,6 +164,7 @@ const deleteProduct = async (req, res) => {
         const productData = {
             is_deleted,
             deleted_at: Timestamp.now(),
+            deleted_by: currentUserId,
         }
 
         await productRef.update(productData);

@@ -1,7 +1,7 @@
 const { firestore } = require("firebase-admin");
 const { Timestamp } = require("firebase-admin/firestore");
 const collection = require("../utils/utils");
-const { sendAdminNotifications, getUserNameById, logUserActivity, getUserRoleById, getStoreNameById } = require("../utils/functions");
+const { sendAdminNotifications, getUserNameById, logUserActivity, getUserRoleById, getStoreNameById, safeSplit, capitalizeFirstLetter } = require("../utils/functions");
 
 const db = firestore();
 
@@ -12,14 +12,13 @@ const addStore = async (req, res) => {
         const { currentUserId } = req.params;
 
         const {
-            store_profile,
+            store_image,
             store_name,
             location,
             radius,
             contact_name,
             contact_number,
             display_information,
-            ...other_data
         } = req.body;
 
         if (
@@ -45,29 +44,23 @@ const addStore = async (req, res) => {
 
         const storeRef = db.collection('stores').doc();
         const storeId = storeRef.id;
-        const currentUserName = await getUserNameById(currentUserId);
-        const getRole = await getUserRoleById(currentUserId);
-        
 
         const storeData = {
-            store_profile,
+            store_image,
             id: storeId,
-            store_name,
-            location,
+            store_name: store_name.toLowerCase().trim(),
+            location: location.toLowerCase().trim(),
             radius,
-            contact_name,
+            contact_name: contact_name.toLowerCase().trim(),
             contact_number,
-            ...other_data,
             created_at: Timestamp.now(),
+            search_tags: [
+                ...safeSplit(store_name.toLowerCase()),
+                ...safeSplit(location.toLowerCase()), 
+                ...safeSplit(radius.toLowerCase()), 
+                ...safeSplit(contact_name.toLowerCase()), 
+            ].flat().filter(Boolean),
         };
-
-        if (getRole === "agent") {
-            await sendAdminNotifications({
-                fcmMessage: "You have one notification in store",
-                message: `${currentUserName} has been added a store named ${store_name}`,
-                type: 'store'
-            })
-        }
 
         await storeRef.set(storeData);
 
@@ -78,11 +71,20 @@ const addStore = async (req, res) => {
                 id: getSubId,
                 product: display.product,
                 display_name : display.display_name,
-                ...other_data,
             }
 
             await subStore.set(storeDisplayInformationData);
         }   
+
+        const currentUserName = await getUserNameById(currentUserId);
+
+        await sendAdminNotifications({
+            heading: "New Store Created",
+            fcmMessage: `${capitalizeFirstLetter(currentUserName)} created a store named ${capitalizeFirstLetter(store_name)}`,
+            title: `${capitalizeFirstLetter(currentUserName)} created a store ${capitalizeFirstLetter(store_name)}`,
+            message: `${capitalizeFirstLetter(currentUserName)} just created a store named ${capitalizeFirstLetter(store_name)}`,
+            type: 'store'
+        });
 
         await logUserActivity({ 
             heading: "store",
@@ -110,10 +112,10 @@ const addStore = async (req, res) => {
 
 const updateStore = async(req, res) => {
     try {
-        const { storeId, currentUserId } = req.params;
+        const { currentUserId, targetId  } = req.params;
 
         const {
-            store_profile,
+            store_image,
             store_name,
             location,
             radius,
@@ -121,29 +123,34 @@ const updateStore = async(req, res) => {
             contact_number,
         } = req.body;
 
-        const storeRef = db.collection('stores').doc(storeId);
+        const storeRef = db.collection('stores').doc(targetId);
         
         const storeData = {
-            store_profile,
-            store_name,
-            location,
+            store_image,
+            store_name: store_name.toLowerCase().trim(),
+            location: location.toLowerCase().trim(),
             radius,
-            contact_name,
+            contact_name: contact_name.toLowerCase().trim(),
             contact_number,
+            search_tags: [
+                ...safeSplit(store_name.toLowerCase()),
+                ...safeSplit(location.toLowerCase()), 
+                ...safeSplit(radius.toLowerCase()), 
+                ...safeSplit(contact_name.toLowerCase()), 
+            ].flat().filter(Boolean) 
         }
 
         await storeRef.update(storeData);
 
-        const getRole = await getUserRoleById(currentUserId);
         const currentUserName = await getUserNameById(currentUserId);
 
-        if (getRole === "agent") {
-            await sendAdminNotifications({
-                fcmMessage: "You have one notification in store",
-                message: `${currentUserName} has been updated a store named ${store_name}`,
-                type: 'store'
-            })
-        }
+        await sendAdminNotifications({
+            heading: "Store Updated",
+            fcmMessage: `${capitalizeFirstLetter(currentUserName)} updated a store named ${capitalizeFirstLetter(store_name)}`,
+            title: `${capitalizeFirstLetter(currentUserName)} updated a store ${capitalizeFirstLetter(store_name)}`,
+            message: `${capitalizeFirstLetter(currentUserName)} just updated a store named ${capitalizeFirstLetter(store_name)}`,
+            type: 'store'
+        });
 
         await logUserActivity({ 
             heading: "store",
@@ -153,7 +160,7 @@ const updateStore = async(req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: "Store added successfully and notifications sent.",
+            message: "Store added successfully.",
         });
     } catch (error) {
         return res.status(500).json({
@@ -165,6 +172,7 @@ const updateStore = async(req, res) => {
 }
 
 //!=============================================================== U P D A T E   D I S P L A Y =========================================================================
+
 const updateDisplay = async (req, res) => {
     try {
         const { storeId, currentUserId } = req.params;
@@ -213,7 +221,6 @@ const updateDisplay = async (req, res) => {
         });
     }
 };
-
 
 
 module.exports = { addStore, updateStore, updateDisplay };

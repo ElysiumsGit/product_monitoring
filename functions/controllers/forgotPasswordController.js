@@ -34,7 +34,6 @@ const forgotPasswordController = async (req, res) => {
 
         return res.status(200).json({ status: true, message: "Successfully sent a verification code" });
     } catch (error) {
-        console.error(error);
         return res.status(500).json({ status: false, message: "Error sending verification" });
     }
 };

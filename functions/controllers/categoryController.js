@@ -33,17 +33,6 @@ const addCategory = async(req, res) => {
 
         await counterRef.set(counterData, { merge: true });
         await categoryRef.set(data);
-
-        const currentUserName = await getUserNameById(currentUserId);
-
-        await sendAdminNotifications({
-            heading: "New Category Created",
-            fcmMessage: `${capitalizeFirstLetter(currentUserName)} created a category named ${capitalizeFirstLetter(category_name)}`,
-            title: `${capitalizeFirstLetter(currentUserName)} created a category named ${capitalizeFirstLetter(category_name)}`,
-            message: `${capitalizeFirstLetter(currentUserName)} just created a category named ${capitalizeFirstLetter(category_name)}`,
-            type: 'category'
-        });
-
         await logUserActivity({ 
             heading: "add category",
             currentUserId: currentUserId, 
@@ -79,16 +68,6 @@ const updateCategory = async (req, res) => {
             category_name: category_name.toLowerCase().trim(),
         });
 
-        const currentUserName = await getUserNameById(currentUserId);
-
-        await sendAdminNotifications({
-            heading: "Category has updated",
-            fcmMessage: `${capitalizeFirstLetter(currentUserName)} updated a category named ${capitalizeFirstLetter(category_name)}`,
-            title: `${capitalizeFirstLetter(currentUserName)} updated a category named ${capitalizeFirstLetter(category_name)}`,
-            message: `${capitalizeFirstLetter(currentUserName)} just updated a category named ${capitalizeFirstLetter(category_name)}`,
-            type: 'category'
-        });
-        
         await logUserActivity({ 
             heading: "Update a Category",
             currentUserId: currentUserId, 
@@ -121,6 +100,7 @@ const deleteCategory = async (req, res) => {
         await categoryRef.update({
             is_deleted: is_deleted,
             deleted_at: is_deleted ? Timestamp.now() : FieldValue.delete(),
+            deleted_by: currentUserId
         });
 
         const counterData = {
@@ -128,17 +108,6 @@ const deleteCategory = async (req, res) => {
         }
 
         await counterRef.set(counterData, { merge: true });
-
-        const currentUserName = await getUserNameById(currentUserId);
-        const category_name = await getCategoryById(targetId);
-
-        await sendAdminNotifications({
-            heading: "Category has Deleted",
-            fcmMessage: `${capitalizeFirstLetter(currentUserName)} deleted a category named ${capitalizeFirstLetter(category_name)}`,
-            title: `${capitalizeFirstLetter(currentUserName)} deleted a category named ${capitalizeFirstLetter(category_name)}`,
-            message: `${capitalizeFirstLetter(currentUserName)} just deleted a category named ${capitalizeFirstLetter(category_name)}`,
-            type: 'category'
-        });
 
         await logUserActivity({ 
             heading: "delete category",

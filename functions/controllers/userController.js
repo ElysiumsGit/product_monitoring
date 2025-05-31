@@ -83,7 +83,6 @@ const addUser = async (req, res) => {
         const getUserUID = getUID.uid;
         const userRef = db.collection('users').doc(); 
         const userId = userRef.id;
-        const getRole = await getUserRoleById(userId);
 
         const userData = {
             avatar: "",
@@ -102,7 +101,7 @@ const addUser = async (req, res) => {
             role: role.toLowerCase(), 
             manage_store,
             manage_account,
-            manage_product: getRole === "promodiser" ? false : manage_product,
+            manage_product,
             team: "",
             status: "inactive",
             is_deleted: false,
@@ -339,7 +338,7 @@ const updateUser = async (req, res) => {
 
         const allowedFields = [
             "avatar", "first_name", "middle_name", "last_name", "birth_date", "mobile_number",
-            "street", "region", "province", "city", "barangay", "zip_code", "role", "status"
+            "street", "region", "province", "city", "barangay", "zip_code", "role", "status", "is_deleted"
         ];
 
         const updatedData = {};
@@ -360,7 +359,7 @@ const updateUser = async (req, res) => {
                 if (key !== "push_notification" && key !== "on_duty") {
                     hasOtherChanges = true;
                 }
-            }
+            };
         }
 
         if (Object.keys(updatedData).length === 0) {
@@ -369,7 +368,6 @@ const updateUser = async (req, res) => {
 
         await userRef.update(updatedData);
 
-        // Update search_tags if identity fields changed
         const identityFields = [
             "first_name", "last_name", "mobile_number", "region",
             "province", "city", "barangay", "zip_code"
@@ -600,7 +598,8 @@ const deleteUser = async(req, res) => {
 
         const userData = {
             is_deleted,
-            deleted_at: is_deleted ? Timestamp.now() : FieldValue.delete(),
+            deleted_at: Timestamp.now(),
+            deleted_by: currentUserId
         }
 
         await userRef.update(userData);
