@@ -47,9 +47,21 @@ const addUser = async (req, res) => {
         } = req.body;
 
         if (
-            !first_name || !last_name || !birth_date || !email || !mobile_number ||
-            !region || !province || !city || !barangay ||
-            !role || !password || !confirm_password || !gender || !nationality || !address1
+            !first_name || 
+            !last_name || 
+            !birth_date || 
+            !email || 
+            !mobile_number ||
+            !region || 
+            !province || 
+            !city || 
+            !barangay || 
+            !role || 
+            !password || 
+            !confirm_password || 
+            !gender || 
+            !nationality || 
+            !address1
         ) {
             return res.status(400).json({ success: false, message: "All fields are required." });
         }
@@ -435,64 +447,6 @@ const updateUser = async (req, res) => {
         });
     }
 };
-
-
-// const updateUser = async(req, res) => {
-//     try {
-//         const { currentUserId, targetId } = req.params;
-//         const { 
-//             first_name,
-//             last_name,
-//             birth_date,
-//             mobile_number,
-//             street_address,
-//             province,
-//             city,
-//             barangay,
-//             zip_code
-//         } = req.body;
-
-//         const userRef = db.collection('users').doc(targetId);
-//         const updatedData = {
-//             first_name,
-//             middle_name: "",
-//             last_name,
-//             birth_date,
-//             mobile_number,
-//             street_address,
-//             province,
-//             city,
-//             barangay,
-//             zip_code
-//         }
-        
-//         await userRef.update(updatedData);
-
-//         const currentUserName = await getUserNameById(currentUserId);
-//         const updateUserName = await getUserNameById(targetId);
-
-//         await sendAdminNotifications({
-//             heading: "Account Has Updated",
-//             fcmMessage: `${capitalizeFirstLetter(currentUserName)} updated an information to ${capitalizeFirstLetter(updateUserName)}`,
-//             title: `${capitalizeFirstLetter(currentUserName)} update a `,
-//             message: `${capitalizeFirstLetter(currentUserName)} just update an account for ${capitalizeFirstLetter(updateUserName)}`,
-//             type: 'user'
-//         });
-
-//         await logUserActivity({
-//             heading: "account",
-//             currentUserId,
-//             activity: "Account has been updated."
-//         });
-
-//     } catch (error) {
-//         return res.status(500).json({
-//             success: false,
-//             message: "Internal server error.",
-//             error: error.message
-//         });
-//     }
-// }
 
 //!=============================================================== L O G I N =========================================================================
 

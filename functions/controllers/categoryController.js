@@ -1,5 +1,5 @@
 const { firestore } = require("firebase-admin");
-const { sendAdminNotifications, getUserNameById, getUserRoleById, logUserActivity, getCategoryById, capitalizeFirstLetter } = require("../utils/functions");
+const { logUserActivity } = require("../utils/functions");
 const { Timestamp, FieldValue } = require("firebase-admin/firestore");
 
 const db = firestore();

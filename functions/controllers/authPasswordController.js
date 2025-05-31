@@ -104,7 +104,7 @@ const getCode = async (req, res) => {
             }
         }
 
-        const code = Math.floor(100000 + Math.random() * 900000);
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
         const code_expires_at = Timestamp.fromDate(new Date(now.getTime() + 3 * 60 * 1000)); 
 
         await counterRef.set({

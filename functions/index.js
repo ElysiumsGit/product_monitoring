@@ -41,6 +41,7 @@ app.use("/forgot", forgotPasswordRoute);
 app.use("/auth", authPassword);
 app.use("/inventory", inventoryRoute);
 app.use("/attendance", attendanceRoute);
+
 // app.use("/scheduleRoute", scheduleRoute);
 // app.use("/", automationRoute);
 
