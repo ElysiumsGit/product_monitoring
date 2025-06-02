@@ -3,8 +3,8 @@ const { manageInventory, updateInventory } = require("../controllers/inventoryCo
 
 const router = express.Router();
 
-router.post("/add/:storeId/:currentUserId", manageInventory);
-router.put("/update/:storeId/:currentUserId/:inventoryId", updateInventory);
+router.post("/add/:currentIdUser/:targetId", manageInventory);
+router.put("/update/:currentUserId/:targetId/:inventoryId", updateInventory);
 
 
 module.exports = router;

@@ -6,68 +6,6 @@ const { sendVerificationCode } = require("../emailer/emailer");
 
 const db = firestore();
 
-// const updatePassword = async (req, res) => {
-//     try {
-//         const { currentUserId } = req.params;
-//         const { new_password, confirm_new_password } = req.body;
-
-//         if (!new_password || !confirm_new_password) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "All password fields are required.",
-//             });
-//         }
-
-//         if (new_password !== confirm_new_password) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "New passwords do not match.",
-//             });
-//         }
-
-//         const userRef = db.collection('users').doc(currentUserId);
-//         const userSnap = await userRef.get();
-
-//         if (!userSnap.exists) {
-//             return res.status(404).json({
-//                 success: false,
-//                 message: "User not found.",
-//             });
-//         }
-
-//         const { auth_id } = userSnap.data();
-
-//         if (!auth_id) {
-//             return res.status(400).json({
-//                 success: false,
-//                 message: "UID not found in user document.",
-//             });
-//         }
-
-//         await admin.auth().updateUser(auth_id, {
-//             password: new_password,
-//         });
-
-//         await logUserActivity({ 
-//             heading: "Change Password",
-//             currentUserId: currentUserId, 
-//             activity: 'You have change the password' 
-//         });
-
-//         return res.status(200).json({
-//             success: true,
-//             message: "Password updated successfully.",
-//         });
-//     } catch (error) {
-//         console.error("Error updating password:", error);
-//         return res.status(500).json({
-//             success: false,
-//             message: "Internal server error.",
-//             error: error.message,
-//         });
-//     }
-// };
-
 //!=================================================== U P D A T E  G E T  C O D E ===========================================================================
 
 const getCode = async (req, res) => {
@@ -91,7 +29,7 @@ const getCode = async (req, res) => {
             const data = counterDoc.data();
 
             if (data.last_attempt_date) {
-                lastAttemptDateStr = data.last_attempt_date.toDate().toISOString().split('T')[0];
+                lastAttemptDateStr = data.last_attempt_date.toDate().toISOString().split(']T')[0];
             }
 
             if (lastAttemptDateStr === todayDateStr) {

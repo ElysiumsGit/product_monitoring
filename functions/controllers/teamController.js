@@ -1,6 +1,6 @@
 const { firestore } = require("firebase-admin");
 const { Timestamp } = require("firebase-admin/firestore");
-const { logUserActivity, incrementNotification, capitalizeFirstLetter, getUserNameById, sendAdminNotifications } = require("../utils/functions");
+const { logUserActivity, incrementNotification, capitalizeFirstLetter, getUserNameById, sendAdminNotifications, getTeamNameById } = require("../utils/functions");
 
 const db = firestore();
 
@@ -20,6 +20,7 @@ const assignTeam = async(req, res) => {
             id: teamId,
             team_name,
             created_at: Timestamp.now(),
+            is_deleted: false
         })
 
         for(const userIds of teams){
@@ -123,21 +124,31 @@ const updateTeam = async (req, res) => {
         const oldTeamName = teamDoc.data().name;
 
         if (team_name !== oldTeamName) {
-            await teamDocRef.update({ name: team_name });
+            await teamDocRef.update({ team_name: team_name });
         }
         
         const usersSnapshot = await db.collection('users').where('team', '==', targetId).get();
         const currentUserIdsInTeam = usersSnapshot.docs.map(doc => doc.id);
         const newTeamSet = new Set(teams);
+        const currentUserName = await getUserNameById(currentUserId);
 
         if (team_name !== oldTeamName) {
             for (const userId of currentUserIdsInTeam) {
                 const notificationRef = db.collection('users').doc(userId).collection('notifications').doc();
+               
                 await notificationRef.set({
                     id: notificationRef.id,
                     title: `Team name has been changed to ${team_name}`,
                     isRead: false,
                     created_at: Timestamp.now(),
+                });
+
+                await sendAdminNotifications({
+                    heading: "Team Renamed",
+                    fcmMessage: `${capitalizeFirstLetter(currentUserName)} rename a team named ${capitalizeFirstLetter(team_name)}`,
+                    title: `${capitalizeFirstLetter(currentUserName)} rename a team ${capitalizeFirstLetter(team_name)}`,
+                    message: `${capitalizeFirstLetter(currentUserName)} just rename a team named ${capitalizeFirstLetter(team_name)}`,
+                    type: 'team'
                 });
 
                 await incrementNotification(userId);
@@ -158,6 +169,14 @@ const updateTeam = async (req, res) => {
                 created_at: Timestamp.now(),
             });
 
+            await sendAdminNotifications({
+                heading: "Team Edit",
+                fcmMessage: `${capitalizeFirstLetter(currentUserName)} there are few members remove in ${capitalizeFirstLetter(team_name)}`,
+                title: `${capitalizeFirstLetter(currentUserName)} there are few members remove in ${capitalizeFirstLetter(team_name)}`,
+                message: `${capitalizeFirstLetter(currentUserName)} there are few members remove in ${capitalizeFirstLetter(team_name)}`,
+                type: 'team'
+            });
+
             await incrementNotification(userId);
         }
 
@@ -170,6 +189,14 @@ const updateTeam = async (req, res) => {
                     title: `You have been added to ${team_name}`,
                     isRead: false,
                     created_at: Timestamp.now(),
+                });
+
+                await sendAdminNotifications({
+                    heading: "Team Add",
+                    fcmMessage: `${capitalizeFirstLetter(currentUserName)} there are few members add in ${capitalizeFirstLetter(team_name)}`,
+                    title: `${capitalizeFirstLetter(currentUserName)} there are few members add in ${capitalizeFirstLetter(team_name)}`,
+                    message: `${capitalizeFirstLetter(currentUserName)} there are few members add in ${capitalizeFirstLetter(team_name)}`,
+                    type: 'team'
                 });
 
                 await incrementNotification(userId);
@@ -198,6 +225,7 @@ const updateTeam = async (req, res) => {
 const deleteTeam = async (req, res) => {
     try {
         const { currentUserId, targetId  } = req.params;
+        const { is_deleted } = req.body;
 
         const teamRef = db.collection("team").doc(targetId);
         const teamDoc = await teamRef.get();
@@ -209,16 +237,15 @@ const deleteTeam = async (req, res) => {
             });
         }
 
-        const { team_name } = teamDoc.data();
-
         await teamRef.update({
-            is_deleted: true,
+            is_deleted: is_deleted,
+            deleted_at: Timestamp.now(),
+            deleted_by: currentUserId
         });
 
-        const usersSnap = await db
-            .collection("users")
-            .where("team", "==", targetId)
-            .get();
+        const usersSnap = await db.collection("users").where("team", "==", targetId).get();
+        const currentUserName = await getUserNameById(currentUserId);
+        const teamName = await getTeamNameById(targetId);
 
         const userUpdatePromises = usersSnap.docs.map(async (userDoc) => {
             const userRef = userDoc.ref;
@@ -230,7 +257,7 @@ const deleteTeam = async (req, res) => {
 
             await notifRef.set({
                 notification_id: notifRef.id,
-                message: `The ${team_name} you were part of has been deleted.`,
+                message: `The ${teamName} you were part of has been deleted.`,
                 created_at: Timestamp.now(),
                 type: "team",
                 isRead: false
@@ -241,6 +268,15 @@ const deleteTeam = async (req, res) => {
         });
 
         await Promise.all(userUpdatePromises);
+
+        await sendAdminNotifications({
+            heading: "Team Deleted",
+            fcmMessage: `${capitalizeFirstLetter(currentUserName)} deleted a team named ${capitalizeFirstLetter(teamName)}`,
+            title: `${capitalizeFirstLetter(currentUserName)} deleted a team ${capitalizeFirstLetter(teamName)}`,
+            message: `${capitalizeFirstLetter(currentUserName)} just deleted a team named ${capitalizeFirstLetter(teamName)}`,
+            type: 'team'
+        });
+
 
         await logUserActivity({ 
             heading: "team deletion",

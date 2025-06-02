@@ -90,6 +90,17 @@ const getUserNameById = async (userId) => {
     return userData.first_name || "Unknown User";
 };
 
+const getTeamNameById = async (teamId) => {
+    const userDoc = await db.collection("team").doc(teamId).get();
+
+    if (!userDoc.exists) {
+        throw new Error("User not found");
+    }
+
+    const userData = userDoc.data();
+    return userData.team_name || "Unknown User";
+};
+
 const getEmailById = async (userId) => {
     const userDoc = await db.collection("users").doc(userId).get();
 
@@ -262,5 +273,6 @@ module.exports = {
     capitalizeFirstLetter,
     incrementNotification,
     safeSplit,
-    getGender
+    getGender,
+    getTeamNameById
 }

@@ -86,13 +86,20 @@ const addUser = async (req, res) => {
         if (emailExists) {
             return res.status(400).json({ success: false, message: "Email already exists." });
         }
-
+        
         const getUID = await admin.auth().createUser({
             email,
             password,
         });
 
         const getUserUID = getUID.uid;
+
+        if(role === "admin"){
+            await admin.auth().setCustomUserClaims(getUserUID, { admin: true });
+        } else {
+            await admin.auth().setCustomUserClaims(getUserUID, { admin: false });
+        }
+
         const userRef = db.collection('users').doc(); 
         const userId = userRef.id;
 
@@ -379,6 +386,16 @@ const updateUser = async (req, res) => {
         }
 
         await userRef.update(updatedData);
+
+        if (updatedData.role) {
+            const updatedRole = updatedData.role.toLowerCase();
+            const authId = userDoc.data().auth_id;
+
+            await admin.auth().setCustomUserClaims(authId, {
+                admin: updatedRole === 'admin',
+                role: updatedRole
+            });
+        }
 
         const identityFields = [
             "first_name", "last_name", "mobile_number", "region",

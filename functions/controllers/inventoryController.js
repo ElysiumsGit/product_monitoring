@@ -7,7 +7,7 @@ const db = firestore();
 
 const manageInventory = async (req, res) => {
     try {
-        const { storeId, currentUserId } = req.params;
+        const { targetId, currentUserId } = req.params;
         const products = req.body;
 
         if (!Array.isArray(products)) {
@@ -29,7 +29,7 @@ const manageInventory = async (req, res) => {
                 return res.status(400).json({ success: false, message: `Product ID ${productId} does not exist.` });
             }
 
-            const inventoryRef = db.collection('stores').doc(storeId).collection('inventory').doc();
+            const inventoryRef = db.collection('stores').doc(targetId).collection('inventory').doc();
 
             batch.set(inventoryRef, {
                 id: inventoryRef.id,
@@ -47,7 +47,7 @@ const manageInventory = async (req, res) => {
         });
 
         const currentUserName = await getUserNameById(currentUserId);
-        const storeName = await getStoreNameById(storeId);
+        const storeName = await getStoreNameById(targetId);
 
         await sendAdminNotifications({
             fcmMessage: `${capitalizeFirstLetter(currentUserName)} manage an inventory to store named ${capitalizeFirstLetter(storeName)}`,
@@ -67,10 +67,10 @@ const manageInventory = async (req, res) => {
 
 const updateInventory = async (req, res) => {
     try {
-        const { storeId, inventoryId, currentUserId } = req.params;
+        const { targetId, inventoryId, currentUserId } = req.params;
         const { unit, quantity, treshold } = req.body;
 
-        const inventoryRef = db.collection('stores').doc(storeId).collection('inventory').doc(inventoryId);
+        const inventoryRef = db.collection('stores').doc(targetId).collection('inventory').doc(inventoryId);
 
         const updateData = {};
 
@@ -91,7 +91,7 @@ const updateInventory = async (req, res) => {
         });
 
         const currentUserName = await getUserNameById(currentUserId);
-        const storeName = await getStoreNameById(storeId);
+        const storeName = await getStoreNameById(targetId);
 
         await sendAdminNotifications({
             fcmMessage: `${capitalizeFirstLetter(currentUserName)} manage an inventory to store named ${capitalizeFirstLetter(storeName)}`,

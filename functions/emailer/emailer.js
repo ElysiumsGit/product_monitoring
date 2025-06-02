@@ -43,10 +43,19 @@ const sendWelcomeEmail = async (to, name, role, id) => {
             min-height: 100vh;
           }
           .container {
-            max-width: 600px;
             width: 100%;
-            text-align: center;
-            overflow: hidden;
+            table-layout: fixed;
+            background-color: #dedede;
+            padding: 20px 0;
+          }
+          .content-box {
+            background-color: #ffffff;
+            max-width: 600px;
+            margin: 0 auto;
+            border: 1px solid #cecece;
+            padding: 40px;
+            font-family: sans-serif;
+            box-sizing: border-box;
           }
           .box {
             background-color: #fefefe;
@@ -154,104 +163,127 @@ const sendWelcomeEmail = async (to, name, role, id) => {
             margin-bottom: 3px;
             color: #000;
           }
-          @media screen and (max-width: 600px) {
+          @media only screen and (max-width: 600px) {
+            .container {
+              width: 100% !important;
+              padding: 0 !important;
+            }
             .content {
-              padding: 20px 16px;
+              padding: 20px !important;
+            }
+            .middleButton a {
+              width: 100px;
+            }
+            .content-box{
+              padding: 10px !important;
+            }  
+            .logo{
+              text-align: center;
             }
           }
         </style>
       </head>
       <body>
-        <div class="container">
-          <div class="logo">
-            <img src="https://praetorianintel.com/public/images/pages/logo.png" alt="Logo" />
-          </div>
-          <img src="./banner.png" alt="">
-          <div class="box">
-            <div class="content">
-              <div class="message">
-                <p>Hi <strong>${name},</strong></p>
-                <p>
-                  An account has been created for you with a role of ${role}. Please verify your email address by clicking the button below.
-                </p>
-                <div class="middleButton">
-                    <a href="${verificationLink}"
-                      style="
-                        background-color: #E93204;
-                        color: #ffffff;
-                        padding: 12px 30px;
-                        width: 200px;
-                        border-radius: 8px;
-                        text-decoration: none;
-                        font-weight: bold;
-                        font-size: 14px;
-                        display: inline-block;
-                      ">
-                      Verify Email
-                    </a>
-                </div>
+        <table class="container" width="100%" cellpadding="0" cellspacing="0" role="presentation">
+          <tr>
+            <td align="center">
+              <div class="content-box"> 
+              <div class="logo">
+                <img src="https://praetorianintel.com/public/images/pages/logo.png" alt="Logo" />
               </div>
-              <hr class="hr1">
-              <div class="information">
-                <h2>Verify your account to access these features:</h2>
-              </div>
-              <div class="feature-container">
-                  <div class="features">
-                      <ul>
-                          <li>
-                              <strong>Add Store:</strong> Expand your operations by integrating new retail locations into your monitoring system.
-                          </li>
-                          <li>
-                              <strong>Add User:</strong> Strengthen team collaboration by giving access to additional team members.
-                          </li>
-                          <li>
-                              <strong>Add Product:</strong> Maintain control and adaptability by managing user permissions and profiles as your team evolves.
-                          </li>
-                      </ul>
+              <img src="./banner.png" alt="">
+              <div class="box">
+                <div class="content">
+                  <div class="message">
+                    <p>Hi <strong>${name},</strong></p>
+                    <p>
+                      An account has been created for you with a role of ${role}. Please verify your email address by clicking the button below.
+                    </p>
+                    <table border="0" cellpadding="0" cellspacing="0" align="center" style="margin: 30px auto;">
+                      <tr>
+                        <td align="center" bgcolor="#E93204" style="border-radius: 8px;">
+                          <a href="${verificationLink}" target="_blank" style="
+                            display: inline-block;
+                            font-family: sans-serif;
+                            font-size: 14px;
+                            font-weight: bold;
+                            color: #ffffff;
+                            text-decoration: none;
+                            padding: 12px 30px;
+                            border-radius: 8px;
+                            background-color: #E93204;
+                          ">
+                            Verify Email
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
                   </div>
-                  <div class="middleButton">
-                    <a href="${verificationLink}"
-                      style="
-                        background-color: #E93204;
-                        color: #ffffff;
-                        padding: 12px 30px;
-                        width: 200px;
-                        border-radius: 8px;
-                        text-decoration: none;
-                        font-weight: bold;
-                        font-size: 14px;
-                        display: inline-block;
-                      ">
-                      Learn More
-                    </a>
+                  <hr class="hr1">
+                  <div class="information">
+                    <h2>Verify your account to access these features:</h2>
+                  </div>
+                  <div class="feature-container">
+                      <div class="features">
+                          <ul>
+                              <li>
+                                  <strong>Add Store:</strong> Expand your operations by integrating new retail locations into your monitoring system.
+                              </li>
+                              <li>
+                                  <strong>Add User:</strong> Strengthen team collaboration by giving access to additional team members.
+                              </li>
+                              <li>
+                                  <strong>Add Product:</strong> Maintain control and adaptability by managing user permissions and profiles as your team evolves.
+                              </li>
+                          </ul>
+                      </div>
+                      <table border="0" cellpadding="0" cellspacing="0" align="center" style="margin: 30px auto;">
+                      <tr>
+                        <td align="center" bgcolor="#E93204" style="border-radius: 8px;">
+                          <a href="${verificationLink}" target="_blank" style="
+                            display: inline-block;
+                            font-family: sans-serif;
+                            font-size: 14px;
+                            font-weight: bold;
+                            color: #ffffff;
+                            text-decoration: none;
+                            padding: 12px 30px;
+                            border-radius: 8px;
+                            background-color: #E93204;
+                          ">
+                            Learn More
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </div>
+                  <hr class="hr2">
+                  <div class="subscription">
+                      <p>
+                          Manage your subscription and view insights on how premium features like advanced scheduling, store analytics, and enhanced reporting are helping optimize your operations from your account page.
+                      </p>
+                  </div>
+                  <div class="logos">
+                      <a href="https://www.facebook.com/praetorianintelligence/" target="_blank" rel="noopener noreferrer">
+                          <img class="img" src="./facebook.png" alt="Facebook">
+                      </a>
+                  </div>
                 </div>
               </div>
-              <hr class="hr2">
-              <div class="subscription">
+                <footer class="footer">
+                  <p>&copy; 2025 Praetorian Intelligence. All rights reserved.</p>
                   <p>
-                      Manage your subscription and view insights on how premium features like advanced scheduling, store analytics, and enhanced reporting are helping optimize your operations from your account page.
+                      <a href="#">Privacy Policy</a> | 
+                      <a href="#">Terms of Service</a> | 
+                      <a href="#">Contact Us</a>
                   </p>
+                </footer>
               </div>
-              <div class="logos">
-                  <a href="https://www.facebook.com/praetorianintelligence/" target="_blank" rel="noopener noreferrer">
-                      <img class="img" src="./facebook.png" alt="Facebook">
-                  </a>
-              </div>
-            </div>
-          </div>
-          <footer class="footer">
-            <p>&copy; 2025 Praetorian Intelligence. All rights reserved.</p>
-            <p>
-                <a href="#">Privacy Policy</a> | 
-                <a href="#">Terms of Service</a> | 
-                <a href="#">Contact Us</a>
-            </p>
-          </footer>
-        </div>
+            </td>
+          </tr>
+        </table>
       </body>
-      </html>
-
-    `
+    </html>`
   };
   return transporter.sendMail(mailOptions);
 };
