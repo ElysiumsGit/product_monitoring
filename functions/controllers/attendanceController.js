@@ -1,7 +1,6 @@
 const { firestore } = require("firebase-admin");
 const { Timestamp } = require("firebase-admin/firestore");
 const { getUserNameById, capitalizeFirstLetter, sendAdminNotifications, logUserActivity } = require("../utils/functions");
-const { on } = require("nodemailer/lib/xoauth2");
 
 const db = firestore();
 

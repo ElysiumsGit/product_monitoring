@@ -3,6 +3,7 @@ const { addUser, updateMyProfile, loginUser, updateUser, deleteUser  } = require
 const authenticateToken = require("../middleware/authenticateToken");
 
 const router = express.Router();
+
 router.post("/add/:currentUserId", addUser);
 router.post("/login", loginUser);
 router.put("/update/:currentUserId" , updateMyProfile);

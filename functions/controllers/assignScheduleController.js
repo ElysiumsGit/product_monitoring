@@ -1,19 +1,36 @@
 const { firestore } = require("firebase-admin");
-const { collections, subCollections } = require("../utils/utils");
 const { Timestamp } = require("firebase-admin/firestore");
 
 const db = firestore();
 
 const assignStoreSchedule = async (req, res) => {
   try {
+
+    const { targetId } = req.params;
     const { assign_users, weekly_pattern, same_time } = req.body;
 
     if(!Array.isArray(assign_users), !Array.isArray(weekly_pattern), same_time){
       return res.status(400).json({ success: false, message: "Assign users must be an array" });
     }
 
+    const scheduleRef = db.collection('stores').doc(targetId).collection('schedules').doc();
+    const scheduleId = scheduleRef.id;
+
+    for(const users of assign_users){
+      const userRef = db.collection('users').doc(users);
+
+      const scheduleRef = {
+        user_id: users,
+        id: scheduleId,
+        
+
+      }
+    }
+
+
+    res.status(200).json({ success: true, message: "Schedules assigned successfully" });
   } catch (error) {
-    
+    res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 }
 

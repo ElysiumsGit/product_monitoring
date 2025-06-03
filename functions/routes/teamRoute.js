@@ -5,6 +5,6 @@ const router = express.Router();
 
 router.post("/add/:currentUserId", assignTeam);
 router.put("/update/:currentUserId/:targetId", updateTeam);
-router.put("/delete/:currentUserId/:targetId", deleteTeam);
+router.delete("/delete/:currentUserId/:targetId", deleteTeam);
 
 module.exports = router;

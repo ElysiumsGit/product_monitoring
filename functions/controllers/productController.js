@@ -14,6 +14,7 @@ const addProduct = async(req, res) => {
             sku_code,
             category,
             unit,
+            quantity_per_box,
         } = req.body;
 
         if(
@@ -34,6 +35,7 @@ const addProduct = async(req, res) => {
             category: category.toLowerCase().trim(),
             sku_status: "active",
             unit: unit.toLowerCase().trim(),
+            quantity_per_box,
             is_deleted: false,
             created_at: Timestamp.now(),
             search_tags: [
@@ -66,7 +68,6 @@ const addProduct = async(req, res) => {
         });
 
     } catch (error) {
-        console.error("Error adding product:", error);
         return res.status(500).json({
             success: false,
             message: "Failed to add product",
@@ -87,6 +88,7 @@ const updateProduct = async(req, res) => {
             category,
             sku_status,
             unit,
+            quantity_per_box,
         } = req.body;
 
         const productRef = db.collection("products").doc(targetId);
@@ -106,6 +108,7 @@ const updateProduct = async(req, res) => {
             category: category.toLowerCase().trim(), 
             sku_status, 
             unit: unit.toLowerCase().trim(), 
+            quantity_per_box,
             search_tags: [
                 ...safeSplit(product_name.toLowerCase()),
                 ...safeSplit(category.toLowerCase()), 
@@ -188,11 +191,13 @@ const deleteProduct = async (req, res) => {
             deleted_at: Timestamp.now(),
         });
 
+
         return res.status(200).json({ success: true, message: "Deleted Product Success" });
+
 
     } catch (error) {
         console.error("Error deleting product", error);
-        return res.status(500).json({ success: false, message: "Failed to delete" });
+        return res.status(500).json({ success: false, message: "Failed to delete", error: error.message });
     }
 };
 

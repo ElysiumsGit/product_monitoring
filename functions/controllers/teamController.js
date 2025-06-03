@@ -222,11 +222,9 @@ const updateTeam = async (req, res) => {
 
 //!=============================================================== D E L E T E  T E A M =========================================================================
 
-const deleteTeam = async (req, res) => {
+const deleteTeam = async(req, res) => {
     try {
-        const { currentUserId, targetId  } = req.params;
-        const { is_deleted } = req.body;
-
+        const { currentUserId, targetId } = req.params;
         const teamRef = db.collection("team").doc(targetId);
         const teamDoc = await teamRef.get();
 
@@ -237,19 +235,15 @@ const deleteTeam = async (req, res) => {
             });
         }
 
-        await teamRef.update({
-            is_deleted: is_deleted,
-            deleted_at: Timestamp.now(),
-            deleted_by: currentUserId
-        });
+        await teamRef.delete();
 
-        const usersSnap = await db.collection("users").where("team", "==", targetId).get();
+        const usersSnap = await db.collection("users").where("team", "==", targetId.toString()).get();
         const currentUserName = await getUserNameById(currentUserId);
         const teamName = await getTeamNameById(targetId);
 
         const userUpdatePromises = usersSnap.docs.map(async (userDoc) => {
             const userRef = userDoc.ref;
-            const notifRef = userRef.collection(notifications).doc();
+            const notifRef = userRef.collection("notifications").doc();
 
             await userRef.update({
                 team: "",
@@ -264,7 +258,6 @@ const deleteTeam = async (req, res) => {
             });
 
             await incrementNotification(userRef.id);
-
         });
 
         await Promise.all(userUpdatePromises);
@@ -286,16 +279,94 @@ const deleteTeam = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: `Team "${team_name}" marked as deleted and all users notified.`,
+            message: `Team "${teamName}" marked as deleted and all users notified.`,
         });
 
+
     } catch (error) {
-        console.error("Error deleting team", error);
-        return res.status(500).json({
+         return res.status(500).json({
             success: false,
-            message: "Failed to mark team as deleted"
+            message: "Failed to mark team as deleted",
+            error: error.message
         });
     }
-};
+}
+
+
+// const deleteTeam = async (req, res) => {
+//     try {
+//         const { currentUserId, targetId  } = req.params;
+//         const { is_deleted } = req.body;
+
+//         const teamRef = db.collection("team").doc(targetId);
+//         const teamDoc = await teamRef.get();
+
+//         if (!teamDoc.exists) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "Team not found."
+//             });
+//         }
+
+//         await teamRef.update({
+//             is_deleted: is_deleted,
+//             deleted_at: Timestamp.now(),
+//             deleted_by: currentUserId
+//         });
+
+//         const usersSnap = await db.collection("users").where("team", "==", targetId.toString()).get();
+//         const currentUserName = await getUserNameById(currentUserId);
+//         const teamName = await getTeamNameById(targetId);
+
+//         const userUpdatePromises = usersSnap.docs.map(async (userDoc) => {
+//             const userRef = userDoc.ref;
+//             const notifRef = userRef.collection("notifications").doc();
+
+//             await userRef.update({
+//                 team: "",
+//             });
+
+//             await notifRef.set({
+//                 notification_id: notifRef.id,
+//                 message: `The ${teamName} you were part of has been deleted.`,
+//                 created_at: Timestamp.now(),
+//                 type: "team",
+//                 isRead: false
+//             });
+
+//             await incrementNotification(userRef.id);
+//         });
+
+//         await Promise.all(userUpdatePromises);
+
+//         await sendAdminNotifications({
+//             heading: "Team Deleted",
+//             fcmMessage: `${capitalizeFirstLetter(currentUserName)} deleted a team named ${capitalizeFirstLetter(teamName)}`,
+//             title: `${capitalizeFirstLetter(currentUserName)} deleted a team ${capitalizeFirstLetter(teamName)}`,
+//             message: `${capitalizeFirstLetter(currentUserName)} just deleted a team named ${capitalizeFirstLetter(teamName)}`,
+//             type: 'team'
+//         });
+
+
+//         await logUserActivity({ 
+//             heading: "team deletion",
+//             currentUserId: currentUserId, 
+//             activity: 'you have deleted a team' 
+//         });
+
+//         return res.status(200).json({
+//             success: true,
+//             message: `Team "${teamName}" marked as deleted and all users notified.`,
+//         });
+
+//     } catch (error) {
+//         console.error("Error deleting team", error);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Failed to mark team as deleted",
+//             error: error.message
+//         });
+//     }
+// };
 
 module.exports = { assignTeam, updateTeam, deleteTeam };

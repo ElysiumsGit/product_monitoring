@@ -94,7 +94,7 @@ const getTeamNameById = async (teamId) => {
     const userDoc = await db.collection("team").doc(teamId).get();
 
     if (!userDoc.exists) {
-        throw new Error("User not found");
+        throw new Error("Team not found");
     }
 
     const userData = userDoc.data();
