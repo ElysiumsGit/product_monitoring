@@ -12,7 +12,7 @@ const userAttendance = async(req, res) => {
         const userRef = db.collection('users').doc(currentUserId);
 
         if (typeof on_duty !== 'boolean') {
-            return res.status(400).json({
+            return res.status(200).json({
                 success: false,
                 message: 'Invalid input. `currentUserId` and `on_duty` (boolean) are required.',
             });
@@ -27,15 +27,15 @@ const userAttendance = async(req, res) => {
         const phHour = phTime.getHours();
         const phMinute = phTime.getMinutes();
 
-        if (phHour < 8) {
-            return res.status(400).json({
-                success: false,
-                message: 'Too early to attendance',
-            });
-        }
+        // if (phHour < 8) {
+        //     return res.status(200).json({
+        //         success: false,
+        //         message: 'Too early to attendance',
+        //     });
+        // }
 
         if (phHour > 11 || (phHour === 11 && phMinute > 0)) {
-            return res.status(400).json({
+            return res.status(200).json({
                 success: false,
                 message: 'Cannot attendance you are late',
             });
@@ -62,7 +62,7 @@ const userAttendance = async(req, res) => {
         });
 
     } catch (error) {
-        return res.status(500).json({
+        return res.status(200).json({
             success: false,
             message: 'Attendance failed',
         });

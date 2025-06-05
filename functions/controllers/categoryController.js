@@ -17,7 +17,7 @@ const addCategory = async(req, res) => {
         }
 
         const categoryRef = db.collection('categories').doc();
-        const counterRef = db.collection('counter').doc('counter_id');
+        // const counterRef = db.collection('counter').doc('counter_id');
         const categoryId = categoryRef.id;
 
         const data = {
@@ -27,11 +27,11 @@ const addCategory = async(req, res) => {
             created_at: Timestamp.now(), 
         }
 
-        const counterData = {
-            categories: FieldValue.increment(1),
-        }
+        // const counterData = {
+        //     categories: FieldValue.increment(1),
+        // }
 
-        await counterRef.set(counterData, { merge: true });
+        // await counterRef.set(counterData, { merge: true });
         await categoryRef.set(data);
         await logUserActivity({ 
             heading: "add category",
@@ -89,7 +89,7 @@ const deleteCategory = async (req, res) => {
         const { is_deleted } = req.body;
 
         const categoryRef = db.collection('categories').doc(targetId);
-        const counterRef = db.collection('counter').doc('counter_id');
+        // const counterRef = db.collection('counter').doc('counter_id');
 
         const doc = await categoryRef.get();
 
@@ -103,11 +103,11 @@ const deleteCategory = async (req, res) => {
             deleted_by: currentUserId
         });
 
-        const counterData = {
-            categories: FieldValue.increment(-1),
-        }
+        // const counterData = {
+        //     categories: FieldValue.increment(-1),
+        // }
 
-        await counterRef.set(counterData, { merge: true });
+        // await counterRef.set(counterData, { merge: true });
 
         await logUserActivity({ 
             heading: "delete category",

@@ -1,13 +1,12 @@
 const { firestore } = require("firebase-admin");
 const { Timestamp } = require("firebase-admin/firestore");
-const collection = require("../utils/utils");
 const { logUserActivity, sendAdminNotifications, getUserNameById, getStoreNameById, capitalizeFirstLetter } = require("../utils/functions");
 
 const db = firestore();
 
 const manageInventory = async (req, res) => {
     try {
-        const { targetId, currentUserId } = req.params;
+        const { currentUserId, targetId } = req.params;
         const products = req.body;
 
         if (!Array.isArray(products)) {
@@ -32,9 +31,12 @@ const manageInventory = async (req, res) => {
             const inventoryRef = db.collection('stores').doc(targetId).collection('inventory').doc();
 
             batch.set(inventoryRef, {
-                id: inventoryRef.id,
+                inventory_id: inventoryRef.id,
                 product: productId,
                 created_at: Timestamp.now(),
+                unit: "",
+                quantity: 0,
+                treshold: 0,
             });
         }
 
@@ -49,16 +51,21 @@ const manageInventory = async (req, res) => {
         const currentUserName = await getUserNameById(currentUserId);
         const storeName = await getStoreNameById(targetId);
 
-        await sendAdminNotifications({
-            fcmMessage: `${capitalizeFirstLetter(currentUserName)} manage an inventory to store named ${capitalizeFirstLetter(storeName)}`,
-            message: `${capitalizeFirstLetter(currentUserName)} added an inventory to ${capitalizeFirstLetter(storeName)}`,
+         await sendAdminNotifications   ({
+            heading: "Created an Inventory",
+            fcmMessage: `${capitalizeFirstLetter(currentUserName)} add the inventory of ${capitalizeFirstLetter(storeName)}`,
+            title: `${capitalizeFirstLetter(currentUserName)} add inventory`,
+            message: `${capitalizeFirstLetter(currentUserName)} just add a attendance of ${capitalizeFirstLetter(storeName)}`,
             type: 'inventory'
         });
 
         return res.status(200).json({ success: true, message: "Inventory successfully created." });
     } catch (error) {
-        console.error("manageInventory error:", error); // Log the actual error
-        return res.status(500).json({ success: false, message: "Failed to add inventory.", error });
+        return res.status(500).json({ 
+            success: false, 
+            message: "Failed to add inventory.", 
+            error: error.message 
+        });
     }
 };
 

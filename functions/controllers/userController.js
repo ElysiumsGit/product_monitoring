@@ -244,7 +244,7 @@ const updateMyProfile = async (req, res) => {
             "avatar", "first_name", "middle_name", "last_name", "birth_date", "email", "mobile_number",
             "region", "province", "city", "barangay", "zip_code", "role", "team", "status",
             "is_deleted", "is_verified", "gender", "address1", "address2",
-            "nationality", "push_notification", "on_duty", "manage_store", "manage_account", "fcm_token"
+            "nationality", "push_notification", "on_duty", "manage_store", "manage_account", "manage_product", "fcm_token"
         ];
 
         const updatedData = {};
@@ -356,8 +356,9 @@ const updateUser = async (req, res) => {
         }
 
         const allowedFields = [
-            "avatar", "first_name", "middle_name", "last_name", "birth_date", "mobile_number",
-            "street", "region", "province", "city", "barangay", "zip_code", "role", "status", "is_deleted"
+            "avatar", "first_name", "middle_name", "last_name", "birth_date", "mobile_number", 'gender',
+            "street", "region", "province", "city", "barangay", "zip_code", "role", "status", "is_deleted", 
+            'nationality', "manage_store", "manage_account", "manage_product",
         ];
 
         const updatedData = {};
@@ -468,7 +469,7 @@ const updateUser = async (req, res) => {
 //!=============================================================== L O G I N =========================================================================
 
 const loginUser = async (req, res) => {
-    try {
+    try { 
         const { idToken, fcmToken } = req.body;
 
         if (!idToken) {

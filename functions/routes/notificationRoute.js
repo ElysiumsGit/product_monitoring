@@ -10,7 +10,7 @@ const router = express.Router();
 // router.put('/delete/:notificationId/:currentUserId', deleteNotification);
 // router.put('/delete/:currentUserId', deleteAllNotification);
 
-router.get('/read/:currentUserId/:notificationId', authenticateToken,  readNotification);
-router.get('/readAllNotification/:currentUserId', authenticateToken, readAllNotifications);
+router.get('/read/:currentUserId/:notificationId',  readNotification);
+router.get('/readAllNotification/:currentUserId', readAllNotifications);
 
 module.exports = router;
