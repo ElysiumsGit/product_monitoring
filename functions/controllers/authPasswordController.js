@@ -48,7 +48,7 @@ const getCode = async (req, res) => {
         await counterRef.set({
             code,
             code_expires_at,
-            attempts: attempts + 1,
+            attempts: FieldValue.increment(1),
             last_attempt_date: Timestamp.fromDate(now),
         }, { merge: true });
 

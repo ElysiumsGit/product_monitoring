@@ -7,13 +7,14 @@ const db = firestore();
 
 const readNotification = async(req, res) => {
     try {
-        const { currentUserId, notificationId } = req.params;
+        const { currentUserId, targetId } = req.params;
+        const { is_read } = req.body;
 
-        const notificationRef = db.collection('users').doc(currentUserId).collection('notifications').doc(notificationId);
+        const notificationRef = db.collection('users').doc(currentUserId).collection('notifications').doc(targetId);
         const counterRef = db.collection('users').doc(currentUserId).collection('counter').doc('counter_id');
 
         await notificationRef.update({
-            is_read: true,
+            is_read,
         });
 
         await counterRef.update({
@@ -36,6 +37,7 @@ const readNotification = async(req, res) => {
 const readAllNotifications = async (req, res) => {
     try {
         const { currentUserId } = req.params;
+        const { is_read } = req.body;
 
         const notificationsRef = db.collection('users').doc(currentUserId).collection('notifications');
         const snapshot = await notificationsRef.get();
@@ -46,7 +48,7 @@ const readAllNotifications = async (req, res) => {
 
         snapshot.forEach((doc) => {
             const notificationRef = notificationsRef.doc(doc.id);
-            batch.update(notificationRef, { is_read: true });
+            batch.update(notificationRef, { is_read });
         });
 
         await batch.commit();

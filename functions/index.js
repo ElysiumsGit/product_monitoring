@@ -33,7 +33,7 @@ app.use(express.json());
 app.use("/users", userRoute);
 app.use("/team", teamRoute);
 app.use("/products", productRoute);
-app.use("/notification", notificationRoute);
+app.use("/notifications", notificationRoute);
 app.use("/stores", storeRoute);
 app.use("/group", groupRoute); 
 app.use("/categories", categoryRoute);

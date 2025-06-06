@@ -2,7 +2,7 @@ const { firestore } = require("firebase-admin");
 const { Timestamp, FieldValue } = require("firebase-admin/firestore");
 const admin = require("firebase-admin");
 const { users, activities, notifications, dateToTimeStamp } = require("../utils/utils");
-const { sendAdminNotifications, logUserActivity, getUserNameById, getUserRoleById, capitalizeFirstLetter, incrementNotification, safeSplit, getGender } = require("../utils/functions");
+const { sendAdminNotifications, logUserActivity, getUserNameById, getUserRoleById, capitalizeFirstLetter, safeSplit, getGender } = require("../utils/functions");
 const { sendWelcomeEmail, sendVerificationCode } = require("../emailer/emailer");
 
 const db = firestore();
@@ -94,11 +94,11 @@ const addUser = async (req, res) => {
 
         const getUserUID = getUID.uid;
 
-        if(role === "admin"){
-            await admin.auth().setCustomUserClaims(getUserUID, { admin: true });
-        } else {
-            await admin.auth().setCustomUserClaims(getUserUID, { admin: false });
-        }
+        // if(role === "admin"){
+        //     await admin.auth().setCustomUserClaims(getUserUID, { admin: true });
+        // } else {
+        //     await admin.auth().setCustomUserClaims(getUserUID, { admin: false });
+        // }
 
         const userRef = db.collection('users').doc(); 
         const userId = userRef.id;
