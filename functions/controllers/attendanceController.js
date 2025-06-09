@@ -97,7 +97,6 @@ const adminUpdateAttendance = async(req, res) => {
 
         await sendAdminNotifications({
             heading: "Update User Attendance",
-            fcmMessage: `${capitalizeFirstLetter(currentUserName)} update the attendance of ${capitalizeFirstLetter(targetName)}`,
             title: `${capitalizeFirstLetter(currentUserName)} update user Attendance`,
             message: `${capitalizeFirstLetter(currentUserName)} just updated a attendance of ${capitalizeFirstLetter(targetName)}`,
             type: 'user'
@@ -145,7 +144,6 @@ const updateAttendance = async(req, res) => {
 
         await sendAdminNotifications({
             heading: "Update User Attendance",
-            fcmMessage: `${capitalizeFirstLetter(currentUserName)} update the attendance of ${capitalizeFirstLetter(targetName)}`,
             title: `${capitalizeFirstLetter(currentUserName)} update user Attendance`,
             message: `${capitalizeFirstLetter(currentUserName)} just updated a attendance of ${capitalizeFirstLetter(targetName)}`,
             type: 'user'

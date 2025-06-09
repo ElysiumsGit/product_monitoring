@@ -52,7 +52,6 @@ const assignTeam = async(req, res) => {
 
         await sendAdminNotifications({
             heading: "New Team Created",
-            fcmMessage: `${capitalizeFirstLetter(currentUserName)} created a team named ${capitalizeFirstLetter(team_name)}`,
             title: `${capitalizeFirstLetter(currentUserName)} created a team ${capitalizeFirstLetter(team_name)}`,
             message: `${capitalizeFirstLetter(currentUserName)} just created a team named ${capitalizeFirstLetter(team_name)}`,
             type: 'team'
@@ -145,7 +144,6 @@ const updateTeam = async (req, res) => {
 
                 await sendAdminNotifications({
                     heading: "Team Renamed",
-                    fcmMessage: `${capitalizeFirstLetter(currentUserName)} rename a team named ${capitalizeFirstLetter(team_name)}`,
                     title: `${capitalizeFirstLetter(currentUserName)} rename a team ${capitalizeFirstLetter(team_name)}`,
                     message: `${capitalizeFirstLetter(currentUserName)} just rename a team named ${capitalizeFirstLetter(team_name)}`,
                     type: 'team'
@@ -171,7 +169,6 @@ const updateTeam = async (req, res) => {
 
             await sendAdminNotifications({
                 heading: "Team Edit",
-                fcmMessage: `${capitalizeFirstLetter(currentUserName)} there are few members remove in ${capitalizeFirstLetter(team_name)}`,
                 title: `${capitalizeFirstLetter(currentUserName)} there are few members remove in ${capitalizeFirstLetter(team_name)}`,
                 message: `${capitalizeFirstLetter(currentUserName)} there are few members remove in ${capitalizeFirstLetter(team_name)}`,
                 type: 'team'
@@ -193,7 +190,6 @@ const updateTeam = async (req, res) => {
 
                 await sendAdminNotifications({
                     heading: "Team Add",
-                    fcmMessage: `${capitalizeFirstLetter(currentUserName)} there are few members add in ${capitalizeFirstLetter(team_name)}`,
                     title: `${capitalizeFirstLetter(currentUserName)} there are few members add in ${capitalizeFirstLetter(team_name)}`,
                     message: `${capitalizeFirstLetter(currentUserName)} there are few members add in ${capitalizeFirstLetter(team_name)}`,
                     type: 'team'
@@ -231,15 +227,15 @@ const deleteTeam = async(req, res) => {
         if (!teamDoc.exists) {
             return res.status(404).json({
                 success: false,
-                message: "Team not found."
+                message: "Team not founasdsadsad."
             });
         }
 
-        await teamRef.delete();
 
         const usersSnap = await db.collection("users").where("team", "==", targetId.toString()).get();
         const currentUserName = await getUserNameById(currentUserId);
         const teamName = await getTeamNameById(targetId);
+
 
         const userUpdatePromises = usersSnap.docs.map(async (userDoc) => {
             const userRef = userDoc.ref;
@@ -264,12 +260,10 @@ const deleteTeam = async(req, res) => {
 
         await sendAdminNotifications({
             heading: "Team Deleted",
-            fcmMessage: `${capitalizeFirstLetter(currentUserName)} deleted a team named ${capitalizeFirstLetter(teamName)}`,
             title: `${capitalizeFirstLetter(currentUserName)} deleted a team ${capitalizeFirstLetter(teamName)}`,
             message: `${capitalizeFirstLetter(currentUserName)} just deleted a team named ${capitalizeFirstLetter(teamName)}`,
             type: 'team'
         });
-
 
         await logUserActivity({ 
             heading: "team deletion",
@@ -277,9 +271,11 @@ const deleteTeam = async(req, res) => {
             activity: 'you have deleted a team' 
         });
 
+        await teamRef.delete();
+
         return res.status(200).json({
             success: true,
-            message: `Team "${teamName}" marked as deleted and all users notified.`,
+            message: `Team deleted marked as deleted and all users notified.`,
         });
 
 

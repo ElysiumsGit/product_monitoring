@@ -4,7 +4,7 @@ const admin = require('firebase-admin');
 
 const db = firestore();
 
-const sendAdminNotifications = async ({heading = "New Account Created", title= "Rico created a new Promodiser Account", fcmMessage = "FCM Message", message = "Message", type}) => {
+const sendAdminNotifications = async ({heading = "New Account Created", title= "Rico created a new Promodiser Account", message = "Message", type}) => {
     const adminUsersSnapshot = await db.collection("users").where("role", "==", "admin").get();
     const notificationPromises = [];
 
@@ -40,7 +40,7 @@ const sendAdminNotifications = async ({heading = "New Account Created", title= "
                     token: adminData.fcm_token,
                     notification: {
                         title: "You have one notification in Store Watch",
-                        body: fcmMessage,
+                        body: title,
                     },
                     data: {
                         type,
@@ -89,6 +89,23 @@ const getUserNameById = async (userId) => {
     const userData = userDoc.data();
     return userData.first_name || "Unknown User";
 };
+
+const getLastName = async (userId) => {
+    const userDoc = await db.collection("users").doc(userId).get();
+
+    if (!userDoc.exists) {
+        throw new Error("User not found");
+    }
+
+    const userData = userDoc.data();
+    return userData.last_name || "Unknown User";
+};
+
+
+
+
+
+
 
 const getTeamNameById = async (teamId) => {
     const userDoc = await db.collection("team").doc(teamId).get();
@@ -263,6 +280,7 @@ module.exports = {
     sendAdminNotifications, 
     logUserActivity, 
     getUserNameById, 
+    getLastName,
     getUserRoleById, 
     notifyTeamMembers,
     getStoreNameById,

@@ -162,8 +162,7 @@ const addUser = async (req, res) => {
 
         await sendAdminNotifications({
             heading: "New Account Created",
-            fcmMessage: `${capitalizeFirstLetter(currentUserName)} created an account named ${capitalizeFirstLetter(first_name)}`,
-            title: `${capitalizeFirstLetter(currentUserName)} created a new ${capitalizeFirstLetter(role)} account`,
+            title: `${capitalizeFirstLetter(currentUserName)} created an account named ${capitalizeFirstLetter(first_name)}`,
             message: `${capitalizeFirstLetter(currentUserName)} just created an account for ${capitalizeFirstLetter(first_name)} as promodiser. Make sure to welcome ${getGender(gender)} and verify that permissions are set up properly.`,
             type: 'user'
         })
@@ -431,7 +430,6 @@ const updateUser = async (req, res) => {
 
         await sendAdminNotifications({
             heading: "Account Has Updated",
-            fcmMessage: `${capitalizeFirstLetter(currentUserName)} updated information for ${capitalizeFirstLetter(updateUserName)}`,
             title: `${capitalizeFirstLetter(currentUserName)} updated an account`,
             message: `${capitalizeFirstLetter(currentUserName)} just updated an account for ${capitalizeFirstLetter(updateUserName)}`,
             type: 'user'
@@ -581,7 +579,6 @@ const deleteUser = async(req, res) => {
 
         await sendAdminNotifications({
             heading: "Account Has Deleted",
-            fcmMessage: `${capitalizeFirstLetter(currentUserName)} deleted an account named ${capitalizeFirstLetter(updateUserName)}`,
             title: `${capitalizeFirstLetter(currentUserName)} delete an account`,
             message: `${capitalizeFirstLetter(currentUserName)} just deleted an account named ${capitalizeFirstLetter(updateUserName)}`,
             type: 'user'

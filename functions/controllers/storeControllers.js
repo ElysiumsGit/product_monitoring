@@ -7,80 +7,68 @@ const db = firestore();
 
 //!=============================================================== A D D   S T O R E =========================================================================
 
-const addStore = async (req, res) => {
+
+const addStore = async(req, res) => {
     try {
         const { currentUserId } = req.params;
-
+     
         const {
             store_image,
             store_name,
-            location,
-            radius,
+            store_location,
+            longitude,
+            latitude,
+            store_radius,
             contact_name,
             contact_number,
-            display_information,
+            display,
         } = req.body;
 
         if (
-            !store_name || !location || !contact_name || !contact_number ||
-            !Array.isArray(display_information) || display_information.length === 0 ||
-            display_information.some(display => !display.product || !display.display_name)
+            !store_name ||
+            !store_location ||
+            typeof longitude !== 'number' ||
+            typeof latitude !== 'number' ||
+            typeof store_radius !== 'number' ||
+            !contact_name ||
+            !contact_number ||
+            !Array.isArray(display)
         ) {
-            return res.status(400).json({ success: false, message: "All fields are required." });
-        }
-
-        const productChecks = await Promise.all(
-            display_information.map(async (display) => {
-                const productRef = db.collection('products').doc(display.product);
-                const productDoc = await productRef.get();
-                return productDoc.exists;
-            })
-        );
-
-        const allProductsValid = productChecks.every(exists => exists);
-        if (!allProductsValid) {
-            return res.status(400).json({ success: false, message: "One or more product IDs are invalid." });
+            return res.status(400).json({ success: false, message: "All fields are required and must be valid types." });
         }
 
         const storeRef = db.collection('stores').doc();
-        const storeId = storeRef.id;
+        const id = storeRef.id;
 
         const storeData = {
             store_image,
-            id: storeId,
+            store_id: id,
             store_name: store_name.toLowerCase().trim(),
-            location: location.toLowerCase().trim(),
-            radius,
+            store_location: store_location.toLowerCase().trim(),
+            longitude,
+            latitude,
+            store_radius,
             contact_name: contact_name.toLowerCase().trim(),
             contact_number,
+            display,
             created_at: Timestamp.now(),
+            is_deleted: false,
             search_tags: [
                 ...safeSplit(store_name.toLowerCase()),
-                ...safeSplit(location.toLowerCase()), 
-                ...safeSplit(radius.toLowerCase()), 
+                ...safeSplit(store_location.toLowerCase()), 
+                longitude,
+                latitude,
+                store_radius,
                 ...safeSplit(contact_name.toLowerCase()), 
             ].flat().filter(Boolean),
         };
 
         await storeRef.set(storeData);
 
-        for(const display of display_information){
-            const subStore = db.collection('stores').doc(storeId).collection('display_information').doc();
-            const getSubId = subStore.id;
-            const storeDisplayInformationData = {
-                id: getSubId,
-                product: display.product,
-                display_name : display.display_name,
-            }
-
-            await subStore.set(storeDisplayInformationData);
-        }   
-
         const currentUserName = await getUserNameById(currentUserId);
 
         await sendAdminNotifications({
             heading: "New Store Created",
-            fcmMessage: `${capitalizeFirstLetter(currentUserName)} created a store named ${capitalizeFirstLetter(store_name)}`,
             title: `${capitalizeFirstLetter(currentUserName)} created a store ${capitalizeFirstLetter(store_name)}`,
             message: `${capitalizeFirstLetter(currentUserName)} just created a store named ${capitalizeFirstLetter(store_name)}`,
             type: 'store'
@@ -92,21 +80,127 @@ const addStore = async (req, res) => {
             activity: 'you have successfully added a store' 
         });
 
-        return res.status(200).json({
+         return res.status(200).json({
             success: true,
             message: "Store added successfully and notifications sent.",
-            data: { id: storeId },
         });
 
     } catch (error) {
-        console.error("Error adding store:", error);
         return res.status(500).json({
             success: false,
             message: "Failed to add store",
             error: error.message,
         });
     }
-};
+}
+
+
+
+// const addStore = async (req, res) => {
+//     try {
+//         const { currentUserId } = req.params;
+
+//         const {
+//             store_image,
+//             store_name,
+//             store_location,
+//             longitude,
+//             latitude,
+//             store_radius,
+//             contact_name,
+//             contact_number,
+//             display_information,
+//         } = req.body;
+
+//         if (
+//             !store_name || !store_location || !contact_name || !contact_number ||
+//             !Array.isArray(display_information) || display_information.length === 0 ||
+//             display_information.some(display => !display.product || !display.display_name)
+//         ) {
+//             return res.status(400).json({ success: false, message: "All fields are required." });
+//         }
+
+//         const productChecks = await Promise.all(
+//             display_information.map(async (display) => {
+//                 const productRef = db.collection('products').doc(display.product);
+//                 const productDoc = await productRef.get();
+//                 return productDoc.exists;
+//             })
+//         );
+
+//         const allProductsValid = productChecks.every(exists => exists);
+//         if (!allProductsValid) {
+//             return res.status(400).json({ success: false, message: "One or more product IDs are invalid." });
+//         }
+
+//         const storeRef = db.collection('stores').doc();
+//         const storeId = storeRef.id;
+
+//         const storeData = {
+//             store_image,
+//             store_id: storeId,
+//             store_name: store_name.toLowerCase().trim(),
+//             store_location: store_location.toLowerCase().trim(),
+//             longitude,
+//             latitude,
+//             store_radius,
+//             contact_name: contact_name.toLowerCase().trim(),
+//             contact_number,
+//             created_at: Timestamp.now(),
+//             search_tags: [
+//                 ...safeSplit(store_name.toLowerCase()),
+//                 ...safeSplit(store_location.toLowerCase()), 
+//                 ...safeSplit(longitude.toLowerCase()), 
+//                 ...safeSplit(latitude.toLowerCase()), 
+//                 ...safeSplit(store_radius.toLowerCase()), 
+//                 ...safeSplit(contact_name.toLowerCase()), 
+//             ].flat().filter(Boolean),
+//         };
+
+//         await storeRef.set(storeData);
+
+//         for(const display of display_information){
+//             const subStore = db.collection('stores').doc(storeId).collection('display_information').doc();
+//             const getSubId = subStore.id;
+//             const storeDisplayInformationData = {
+//                 id: getSubId,
+//                 product: display.product,
+//                 display_name : display.display_name,
+//             }
+
+//             await subStore.set(storeDisplayInformationData);
+//         }   
+
+//         const currentUserName = await getUserNameById(currentUserId);
+
+//         await sendAdminNotifications({
+//             heading: "New Store Created",
+//             title: `${capitalizeFirstLetter(currentUserName)} created a store ${capitalizeFirstLetter(store_name)}`,
+//             message: `${capitalizeFirstLetter(currentUserName)} just created a store named ${capitalizeFirstLetter(store_name)}`,
+//             type: 'store'
+//         });
+
+//         await logUserActivity({ 
+//             heading: "store",
+//             currentUserId: currentUserId, 
+//             activity: 'you have successfully added a store' 
+//         });
+
+//         return res.status(200).json({
+//             success: true,
+//             message: "Store added successfully and notifications sent.",
+//             data: { id: storeId },
+//         });
+
+//     } catch (error) {
+//         console.error("Error adding store:", error);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Failed to add store",
+//             error: error.message,
+//         });
+//     }
+// };
 
 //!=============================================================== U P D A T E   S T O R E =========================================================================
 
@@ -117,8 +211,10 @@ const updateStore = async(req, res) => {
         const {
             store_image,
             store_name,
-            location,
-            radius,
+            store_location,
+            longitude,
+            latitude,
+            store_radius,
             contact_name,
             contact_number,
         } = req.body;
@@ -128,14 +224,18 @@ const updateStore = async(req, res) => {
         const storeData = {
             store_image,
             store_name: store_name.toLowerCase().trim(),
-            location: location.toLowerCase().trim(),
-            radius,
+            store_location: store_location.toLowerCase().trim(),
+            longitude,
+            latitude,
+            store_radius,
             contact_name: contact_name.toLowerCase().trim(),
             contact_number,
             search_tags: [
                 ...safeSplit(store_name.toLowerCase()),
-                ...safeSplit(location.toLowerCase()), 
-                ...safeSplit(radius.toLowerCase()), 
+                ...safeSplit(store_location.toLowerCase()), 
+                longitude,
+                latitude,
+                store_radius, 
                 ...safeSplit(contact_name.toLowerCase()), 
             ].flat().filter(Boolean) 
         }
@@ -146,7 +246,6 @@ const updateStore = async(req, res) => {
 
         await sendAdminNotifications({
             heading: "Store Updated",
-            fcmMessage: `${capitalizeFirstLetter(currentUserName)} updated a store named ${capitalizeFirstLetter(store_name)}`,
             title: `${capitalizeFirstLetter(currentUserName)} updated a store ${capitalizeFirstLetter(store_name)}`,
             message: `${capitalizeFirstLetter(currentUserName)} just updated a store named ${capitalizeFirstLetter(store_name)}`,
             type: 'store'
@@ -166,6 +265,47 @@ const updateStore = async(req, res) => {
         return res.status(500).json({
             success: false,
             message: "Failed to add store",
+            error: error.message,
+        });
+    }
+}
+
+//!=============================================================== D E L E T E   S T O R E =========================================================================
+
+const deleteStore = async(req, res) => {
+    try {
+        const { currentUserId, targetId } = req.body;
+
+        const {is_deleted,} = req.body;
+
+        const storeRef = db.collection('stores');
+
+        const deleteData = {
+            is_deleted,
+            deleted_by: currentUserId,
+            deleted_at: Timestamp.now()
+        }
+
+        await storeRef.set(deleteData);
+
+        const currentUserName = await getUserNameById(currentUserId);
+        const store_name = await getStoreNameById(targetId);
+
+        await sendAdminNotifications({
+            heading: "Store Updated",
+            title: `${capitalizeFirstLetter(currentUserName)} updated a store ${capitalizeFirstLetter(store_name)}`,
+            message: `${capitalizeFirstLetter(currentUserName)} just updated a store named ${capitalizeFirstLetter(store_name)}`,
+            type: 'store'
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Store deleted successfully.",
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Failed to delete store",
             error: error.message,
         });
     }
@@ -223,4 +363,4 @@ const updateDisplay = async (req, res) => {
 };
 
 
-module.exports = { addStore, updateStore, updateDisplay };
+module.exports = { addStore, updateStore, deleteStore, updateDisplay };

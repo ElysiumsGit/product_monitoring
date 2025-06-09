@@ -1,6 +1,6 @@
 const { firestore } = require("firebase-admin");
 const { Timestamp } = require("firebase-admin/firestore");
-const { logUserActivity, sendAdminNotifications, getUserNameById, getStoreNameById, capitalizeFirstLetter } = require("../utils/functions");
+const { logUserActivity, sendAdminNotifications, getUserNameById, getStoreNameById, capitalizeFirstLetter, getLastName } = require("../utils/functions");
 
 const db = firestore();
 
@@ -33,6 +33,9 @@ const manageInventory = async (req, res) => {
             return res.status(400).json({ success: false, message: error.message });
         }
 
+        const firstName = await getUserNameById(currentUserId);
+        const lastName = await getLastName(currentUserId);
+
         await Promise.all(
             validProducts.map(async (productId) => {
                 const inventoryRef = db.collection('stores').doc(targetId).collection('inventory').doc();
@@ -45,6 +48,7 @@ const manageInventory = async (req, res) => {
                     quantity: 0,
                     treshold: 0,
                     is_deleted: false,
+                    action_by: firstName + lastName
                 });
             })
         );
@@ -56,14 +60,12 @@ const manageInventory = async (req, res) => {
             activity: 'new inventory has been created'
         });
 
-        const currentUserName = await getUserNameById(currentUserId);
         const storeName = await getStoreNameById(targetId);
 
         await sendAdminNotifications({
             heading: "Created an Inventory",
-            fcmMessage: `${capitalizeFirstLetter(currentUserName)} added inventory to ${capitalizeFirstLetter(storeName)}`,
-            title: `${capitalizeFirstLetter(currentUserName)} added inventory`,
-            message: `${capitalizeFirstLetter(currentUserName)} just added inventory to ${capitalizeFirstLetter(storeName)}`,
+            title: `${capitalizeFirstLetter(firstName)} added inventory`,
+            message: `${capitalizeFirstLetter(firstName)} just added inventory to ${capitalizeFirstLetter(storeName)}`,
             type: 'inventory'
         });
 
@@ -110,7 +112,6 @@ const updateInventory = async (req, res) => {
 
         await sendAdminNotifications({
             heading: "Updated an Inventory",
-            fcmMessage: `${capitalizeFirstLetter(currentUserName)} update inventory to ${capitalizeFirstLetter(storeName)}`,
             title: `${capitalizeFirstLetter(currentUserName)} update inventory`,
             message: `${capitalizeFirstLetter(currentUserName)} just update inventory to ${capitalizeFirstLetter(storeName)}`,
             type: 'inventory'
@@ -152,7 +153,6 @@ const deleteInventory = async(req, res) => {
 
         await sendAdminNotifications({
             heading: "Updated an Inventory",
-            fcmMessage: `${capitalizeFirstLetter(currentUserName)} update inventory to ${capitalizeFirstLetter(storeName)}`,
             title: `${capitalizeFirstLetter(currentUserName)} update inventory`,
             message: `${capitalizeFirstLetter(currentUserName)} just update inventory to ${capitalizeFirstLetter(storeName)}`,
             type: 'inventory'

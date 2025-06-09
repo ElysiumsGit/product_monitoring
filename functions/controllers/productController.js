@@ -50,7 +50,6 @@ const addProduct = async(req, res) => {
 
         await sendAdminNotifications({
             heading: "New Product Created",
-            fcmMessage: `${capitalizeFirstLetter(currentUserName)} created a product named ${capitalizeFirstLetter(product_name)}`,
             title: `${capitalizeFirstLetter(currentUserName)} created a product ${capitalizeFirstLetter(product_name)}`,
             message: `${capitalizeFirstLetter(currentUserName)} just created a product named ${capitalizeFirstLetter(product_name)}`,
             type: 'product'
@@ -127,7 +126,6 @@ const updateProduct = async(req, res) => {
 
         await sendAdminNotifications({
             heading: "Product Updated",
-            fcmMessage: `${capitalizeFirstLetter(currentUserName)} updated a product named ${capitalizeFirstLetter(product_name)}`,
             title: `${capitalizeFirstLetter(currentUserName)} updated a product ${capitalizeFirstLetter(product_name)}`,
             message: `${capitalizeFirstLetter(currentUserName)} just updated a product named ${capitalizeFirstLetter(product_name)}`,
             type: 'product'
@@ -174,7 +172,6 @@ const deleteProduct = async (req, res) => {
 
         await sendAdminNotifications({
             heading: "Product Updated",
-            fcmMessage: `${capitalizeFirstLetter(currentUserName)} updated a product named ${capitalizeFirstLetter(product_name)}`,
             title: `${capitalizeFirstLetter(currentUserName)} updated a product ${capitalizeFirstLetter(product_name)}`,
             message: `${capitalizeFirstLetter(currentUserName)} just updated a product named ${capitalizeFirstLetter(product_name)}`,
             type: 'product'

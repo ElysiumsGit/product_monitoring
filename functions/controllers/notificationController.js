@@ -5,34 +5,66 @@ const db = firestore();
 
 //!=============================================================== D E L E T E    N O T I F I C A T I O N =========================================================================
 
-const readNotification = async(req, res) => {
+const readNotification = async (req, res) => {
     try {
         const { currentUserId, targetId } = req.params;
         const { is_read } = req.body;
 
-        const notificationRef = db.collection('users').doc(currentUserId).collection('notifications').doc(targetId);
-        const counterRef = db.collection('users').doc(currentUserId).collection('counter').doc('counter_id');
+        if (typeof is_read !== 'boolean') {
+            return res.status(400).json({
+                success: false,
+                message: "`is_read` must be a boolean",
+            });
+        }
 
-        await notificationRef.update({
-            is_read,
-        });
+        const notificationRef = db
+            .collection('users')
+            .doc(currentUserId)
+            .collection('notifications')
+            .doc(targetId);
 
-        await counterRef.update({
-            notifications: FieldValue.increment(-1),
-        });
+        const counterRef = db
+            .collection('users')
+            .doc(currentUserId)
+            .collection('counter')
+            .doc('counter_id');
+
+        const notificationSnap = await notificationRef.get();
+
+        if (!notificationSnap.exists) {
+            return res.status(404).json({
+                success: false,
+                message: "Notification not found",
+            });
+        }
+
+        const currentData = notificationSnap.data();
+
+        if (!currentData.is_read && is_read === true) {
+            await notificationRef.update({ is_read: true });
+            await counterRef.update({
+                notifications: FieldValue.increment(-1),
+            });
+
+            return res.status(200).json({
+                success: true,
+                message: "Notification marked as read and counter updated",
+            });
+        }
 
         return res.status(200).json({
             success: true,
-            message: "Successfully read the notification",
+            message: "No update needed (already read or no change)",
         });
-        
+
     } catch (error) {
+        console.error("Error reading notification:", error);
         return res.status(500).json({
             success: false,
-            message: "Failed to read"
+            message: "Failed to read notification"
         });
     }
-}
+};
 
 const readAllNotifications = async (req, res) => {
     try {
