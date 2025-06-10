@@ -1,39 +1,56 @@
 const { firestore } = require("firebase-admin");
-const { Timestamp } = require("firebase-admin/firestore");
+const { Timestamp, FieldValue } = require("firebase-admin/firestore");
+const { sendAdminNotifications, capitalizeFirstLetter, logUserActivity, getUserNameById, getStoreNameById } = require("../utils/functions");
 
 const db = firestore();
 
 const assignStoreSchedule = async (req, res) => {
   try {
-
-    const { targetId } = req.params;
+    const { currentUserId, targetId } = req.params;
     const { assign_users, weekly_pattern, same_time } = req.body;
 
-    if(!Array.isArray(assign_users), !Array.isArray(weekly_pattern), same_time){
-      return res.status(400).json({ success: false, message: "Assign users must be an array" });
+    if (!Array.isArray(assign_users) || !Array.isArray(weekly_pattern) || typeof same_time !== 'boolean') {
+      return res.status(400).json({ success: false, message: "Invalid request body" });
     }
 
-    const scheduleRef = db.collection('stores').doc(targetId).collection('schedules').doc();
-    const scheduleId = scheduleRef.id;
+    const assignRef = db.collection('stores').doc(targetId).collection('schedule').doc();
 
-    for(const users of assign_users){
-      const userRef = db.collection('users').doc(users);
+    const updateUserPromises = assign_users.map(userId => {
+      const userRef = db.collection('users').doc(userId);
+        return userRef.update({
+          assigned_store: FieldValue.arrayUnion(targetId)
+        });
+      });
+    await Promise.all(updateUserPromises);
 
-      const scheduleRef = {
-        user_id: users,
-        id: scheduleId,
-        
+    const firstName = await getUserNameById(currentUserId);
+    const storeName = await getStoreNameById(targetId);
 
-      }
-    }
+    await assignRef.set({
+      assign_users,
+      weekly_pattern,
+      same_time
+    });
 
+    await sendAdminNotifications({
+        heading: "Schedule an Employees",
+        title: `${capitalizeFirstLetter(firstName)} added inventory`,
+        message: `${capitalizeFirstLetter(firstName)} just added inventory to ${capitalizeFirstLetter(storeName)}`,
+        type: 'inventory'
+    });
+
+    await logUserActivity({
+        heading: "inventory",
+        currentUserId,
+        activity: 'new inventory has been created'
+    });
 
     res.status(200).json({ success: true, message: "Schedules assigned successfully" });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Internal Server Error" });
+    console.error("Error assigning schedule:", error);
+    res.status(500).json({ success: false, message: "Internal Server Error", error: error.message });
   }
-}
-
+};
 // const getNextWeekdayDate = (baseDate, targetDay) => {
 //     const weekdays = {
 //         sunday: 0,

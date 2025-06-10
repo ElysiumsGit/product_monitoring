@@ -7,7 +7,6 @@ const db = firestore();
 
 //!=============================================================== A D D   S T O R E =========================================================================
 
-
 const addStore = async(req, res) => {
     try {
         const { currentUserId } = req.params;
@@ -93,8 +92,6 @@ const addStore = async(req, res) => {
         });
     }
 }
-
-
 
 // const addStore = async (req, res) => {
 //     try {

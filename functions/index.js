@@ -21,7 +21,8 @@ const forgotPasswordRoute = require("./routes/forgotPasswordRoute");
 const authPassword = require("./routes/authPasswordRoute");
 const inventoryRoute = require("./routes/inventoryRoute");
 const attendanceRoute = require("./routes/attendanceRoute");
-// const scheduleRoute = require("./routes/scheduleRoute");
+const scheduleRoute = require("./routes/scheduleRoute");
+const submissionRoute = require("./routes/submissionRoute");
 // const automationRoute = require("./routes/automationRoute");
 const { renderErrorPage } = require('./renderHtml/error');
 
@@ -42,8 +43,8 @@ app.use("/forgot", forgotPasswordRoute);
 app.use("/auth", authPassword);
 app.use("/inventory", inventoryRoute);
 app.use("/attendance", attendanceRoute);
-
-// app.use("/scheduleRoute", scheduleRoute);
+app.use("/submissions", submissionRoute);
+app.use("/schedule", scheduleRoute);
 // app.use("/", automationRoute);
 
 app.use((req, res) => {

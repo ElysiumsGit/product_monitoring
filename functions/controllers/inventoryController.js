@@ -48,7 +48,8 @@ const manageInventory = async (req, res) => {
                     quantity: 0,
                     treshold: 0,
                     is_deleted: false,
-                    action_by: firstName + lastName
+                    action_by: `${firstName} ${lastName}`,
+                    action: "in",
                 });
             })
         );
