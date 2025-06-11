@@ -25,11 +25,11 @@ const addGroup = async (req, res) => {
             }
         }
 
-        const groupRef = db.collection('groups').doc();
+        const groupRef = db.collection('store-group').doc();
         const getGroupId = groupRef.id;
 
         await groupRef.set({
-            id: getGroupId,
+            group_id: getGroupId,
             group_name,
             created_at: Timestamp.now(),
         });
@@ -37,20 +37,10 @@ const addGroup = async (req, res) => {
         for(const updateStore of storeDocs){
             const storeRef = db.collection('stores').doc(updateStore.id);
             await storeRef.update({
-                group: getGroupId,
+                store_group: getGroupId,
             })
         }
 
-        const getUserName = await getUserNameById(currentUserId);
-        const getRole = await getUserRoleById(currentUserId);
-
-        if(getRole === 'agent'){
-          await sendAdminNotifications({
-              fcmMessage: "You have one notification in category",
-              message: `${getUserName} has added a group named ${group_name}`,
-              type: 'group'
-          })
-        }
         await logUserActivity({ 
             heading: "add group",
             currentUserId: currentUserId, 
@@ -61,28 +51,29 @@ const addGroup = async (req, res) => {
 
     } catch (error) {
         console.error("Error adding group:", error);
-        return res.status(500).json({ success: false, message: "Internal server error" });
+        return res.status(500).json({ success: false, message: "Internal server error", error: error.message });
     }
 };
 
-//=============================================================== U P D A T E   G R O U P =========================================================================
+//!=============================================================== U P D A T E   G R O U P =========================================================================
+
 const updateGroup = async (req, res) => {
     try {
-      const { groupId, currentUserId } = req.params;
+      const { currentUserId, targetId  } = req.params;
       const { group_name, stores } = req.body;
   
       if (!group_name || !Array.isArray(stores)) {
         return res.status(400).json({ success: false, message: "Invalid Data" });
       }
   
-      const groupRef = db.collection('groups').doc(groupId);
+      const groupRef = db.collection('store-group').doc(targetId);
   
       await groupRef.update({
         group_name,
       });
   
       const existingStoresSnap = await db.collection('stores')
-        .where('group', '==', groupId)
+        .where('group', '==', targetId)
         .get();
   
       const existingStoreIds = existingStoresSnap.docs.map(doc => doc.id);
@@ -91,25 +82,14 @@ const updateGroup = async (req, res) => {
   
       for (const storeId of storesToAdd) {
         await db.collection('stores').doc(storeId).update({
-          group: groupId,
+          store_group: targetId,
         });
       }
   
       for (const storeId of storesToRemove) {
         await db.collection('stores').doc(storeId).update({
-          group: FieldValue.delete(),
+          store_group: "",
         });
-      }
-  
-      const getUserName = await getUserNameById(currentUserId);
-      const getRole = await getUserRoleById(currentUserId);
-  
-      if (getRole === 'agent') {
-        await sendAdminNotifications({
-            fcmMessage: "You have one notification in category",
-            message: `${getUserName} has updated a group named ${group_name}`,
-            type: 'group'
-        })
       }
   
       await logUserActivity({ 
@@ -122,15 +102,17 @@ const updateGroup = async (req, res) => {
   
     } catch (error) {
       console.error("Error updating group:", error);
-      return res.status(500).json({ success: false, message: "Internal Server Error" });
+      return res.status(500).json({ success: false, message: "Internal Server Error", error: error.message });
     }
 };
   
+//!=============================================================== U P D A T E   G R O U P =========================================================================
+
 const deleteGroup = async(req, res) => {
     try {
-        const { groupId, currentUserId } = req.params
+        const { currentUserId, targetId } = req.params
 
-        const groupRef = db.collection('groups').doc(groupId);
+        const groupRef = db.collection('store-group').doc(targetId);
         const groupDoc = await groupRef.get();
 
         if(!groupDoc.exists){
@@ -140,33 +122,23 @@ const deleteGroup = async(req, res) => {
             });
         }
 
-        const storeSnap = await db.collection('stores').where("group", "==", groupId).get();
+        const storeSnap = await db.collection('stores').where("group", "==", targetId).get();
         
         const storeUpdatePromises = storeSnap.docs.map(async (storeDoc) => {
             const storeRef = storeDoc.ref;
 
             await storeRef.update({
-                group: firestore.FieldValue.delete(),
+                store_group: "",
             })
         });
 
         await Promise.all(storeUpdatePromises);
         await groupRef.update({
           is_deleted: true,
+          deleted_by: currentUserId,
+          deleted_at: Timestamp.now(),
         });
 
-        const getUserName = await getUserNameById(currentUserId);
-        const getRole = await getUserRoleById(currentUserId);
-        const groupName = await getGroupNameById(groupId);
-  
-        if (getRole === 'agent') {
-          await sendAdminNotifications({
-            fcmMessage: "You have one notification in category",
-            message: `${getUserName} has updated a group named ${groupName}`,
-            type: 'group'
-          })
-        }
-  
         await logUserActivity({ 
             heading: "deleted group",
             currentUserId: currentUserId, 

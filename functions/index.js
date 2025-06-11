@@ -36,7 +36,7 @@ app.use("/team", teamRoute);
 app.use("/products", productRoute);
 app.use("/notifications", notificationRoute);
 app.use("/stores", storeRoute);
-app.use("/group", groupRoute); 
+app.use("/store-group", groupRoute); 
 app.use("/categories", categoryRoute);
 app.use("/verify", verifyRoute);
 app.use("/forgot", forgotPasswordRoute);

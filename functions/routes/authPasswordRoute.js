@@ -1,5 +1,5 @@
 const express = require("express");
-const { updatePassword, getCode, submitCode } = require("../controllers/authPasswordController");
+const { updatePassword, getCode } = require("../controllers/authPasswordController");
 
 const router = express.Router();
 

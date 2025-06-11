@@ -58,7 +58,7 @@ const getCode = async (req, res) => {
 
         return res.status(200).json({ success: true, message: "Successfully sent a verification code" });
     } catch (error) {
-        return res.status(500).json({ success: false, message: "Error sending verification" });
+        return res.status(500).json({ success: false, message: "Error sending verification", error: error.message });
     }
 };
 

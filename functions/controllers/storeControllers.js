@@ -52,6 +52,7 @@ const addStore = async(req, res) => {
             display,
             created_at: Timestamp.now(),
             is_deleted: false,
+            group: "",
             search_tags: [
                 ...safeSplit(store_name.toLowerCase()),
                 ...safeSplit(store_location.toLowerCase()), 
