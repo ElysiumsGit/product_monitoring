@@ -25,8 +25,10 @@ const addSubmission = async (req, res) => {
             } = datus;
 
             const submissionRef = db.collection("submissions").doc();
+            const submissionId = submissionRef.id;
 
             const data = {
+                submission_id: submissionId,
                 image,
                 user_id,
                 store_id,

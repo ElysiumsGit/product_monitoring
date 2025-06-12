@@ -5,6 +5,6 @@ const router = express.Router();
 
 router.post("/add/:currentUserId", addGroup);
 router.put("/update/:currentUserId/:targetId", updateGroup);
-router.put("/delete/:currentUserId/:targetId", deleteGroup);
+router.delete("/delete/:currentUserId/:targetId", deleteGroup);
 
 module.exports = router;

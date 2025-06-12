@@ -122,7 +122,7 @@ const deleteGroup = async(req, res) => {
             });
         }
 
-        const storeSnap = await db.collection('stores').where("group", "==", targetId).get();
+        const storeSnap = await db.collection('stores').where("store_group", "==", targetId).get();
         
         const storeUpdatePromises = storeSnap.docs.map(async (storeDoc) => {
             const storeRef = storeDoc.ref;
@@ -133,11 +133,7 @@ const deleteGroup = async(req, res) => {
         });
 
         await Promise.all(storeUpdatePromises);
-        await groupRef.update({
-          is_deleted: true,
-          deleted_by: currentUserId,
-          deleted_at: Timestamp.now(),
-        });
+        await groupRef.delete();
 
         await logUserActivity({ 
             heading: "deleted group",

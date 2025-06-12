@@ -108,6 +108,7 @@ const updateInventory = async (req, res) => {
             activity: 'Inventory item has been updated'
         });
 
+        
         const currentUserName = await getUserNameById(currentUserId);
         const storeName = await getStoreNameById(targetId);
 

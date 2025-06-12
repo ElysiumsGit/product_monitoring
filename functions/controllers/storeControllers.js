@@ -52,7 +52,7 @@ const addStore = async(req, res) => {
             display,
             created_at: Timestamp.now(),
             is_deleted: false,
-            group: "",
+            store_group: "",
             search_tags: [
                 ...safeSplit(store_name.toLowerCase()),
                 ...safeSplit(store_location.toLowerCase()), 
@@ -252,17 +252,17 @@ const updateStore = async(req, res) => {
         await logUserActivity({ 
             heading: "store",
             currentUserId: currentUserId, 
-            activity: 'you have successfully added a store' 
+            activity: 'you have successfully update a store' 
         });
 
         return res.status(200).json({
             success: true,
-            message: "Store added successfully.",
+            message: "Store updated successfully.",
         });
     } catch (error) {
         return res.status(500).json({
             success: false,
-            message: "Failed to add store",
+            message: "Failed to update store",
             error: error.message,
         });
     }
@@ -272,11 +272,11 @@ const updateStore = async(req, res) => {
 
 const deleteStore = async(req, res) => {
     try {
-        const { currentUserId, targetId } = req.body;
+        const { currentUserId, targetId } = req.params;
 
-        const {is_deleted,} = req.body;
+        const { is_deleted } = req.body;
 
-        const storeRef = db.collection('stores');
+        const storeRef = db.collection('stores').doc(targetId);
 
         const deleteData = {
             is_deleted,
@@ -284,7 +284,7 @@ const deleteStore = async(req, res) => {
             deleted_at: Timestamp.now()
         }
 
-        await storeRef.set(deleteData);
+        await storeRef.update(deleteData);
 
         const currentUserName = await getUserNameById(currentUserId);
         const store_name = await getStoreNameById(targetId);
