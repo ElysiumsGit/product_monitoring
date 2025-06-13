@@ -7,13 +7,12 @@ const addSubmission = async (req, res) => {
     const { currentUserId } = req.params;
 
     try {
-        const submissions = req.body; // direct array in the body
+        const submissions = req.body; 
 
         if (!Array.isArray(submissions) || submissions.length === 0) {
             return res.status(400).json({ success: false, message: "No submission data provided." });
         }
 
-        // Create an array of Firestore write promises
         const submissionPromises = submissions.map((datus) => {
             const {
                 image,
@@ -35,16 +34,15 @@ const addSubmission = async (req, res) => {
                 product_id,
                 display_quantity,
                 add_quantity,
+                status: "pending",
                 created_at: Timestamp.now(),
             };
 
-            return submissionRef.set(data); // returns a promise
+            return submissionRef.set(data); 
         });
 
-        // Wait for all Firestore writes to complete
         await Promise.all(submissionPromises);
 
-        // Get current user's name for notifications/log
         const firstName = await getUserNameById(currentUserId);
 
         await sendAdminNotifications({
